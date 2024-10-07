@@ -6,7 +6,7 @@
 #   Author: Niamh Smith; E-mail: niamh.smith.17 [at] ucl.ac.uk
 #   Date:
 
-import os
+# import os
 import sys
 import time
 import threading as th
@@ -64,24 +64,26 @@ class Delay_Print:
                              for other threads are being executed.
     """
 
-    def __init__(self, s, lock, t = None, q = None):
+    def __init__(self, s_, lock, t = None, q = None):
         count = 0
         if q:
-            if q.empty() is True:
-                with lock:
-                    count += 1
-                    sys.stdout.write(s)
-                    sys.stdout.flush()
-                    time.sleep(t)
-                    if count == 110:
-                        sys.stdout.write('\n')
+            while q.empty() is True:
+                for s in s_:
+                    with lock:
+                        count += 1
+                        sys.stdout.write(s)
                         sys.stdout.flush()
-                        count = 0
+                        time.sleep(t)
+                        if count == 110:
+                            sys.stdout.write('\n')
+                            sys.stdout.flush()
+                            count = 0
             else:
+                print('queue called and item given [C.M L81]')
                 sys.exit(0)
         else:
             with lock:
-                self.printer(s, t)
+                self.printer(s_, t)
 
     def printer(self, s, t = None):
         """

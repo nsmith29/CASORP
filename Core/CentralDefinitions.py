@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-import json
+# import json
 import sys
+import time
 from shared_memory_dict import SharedMemoryDict
 
-__all__ = {'boolconvtr', 'CaS_Settings', 'create_nested_dict', 'Dirs', 'End_Error',  'get_dirs', 'proxyfunction',
-           'ProcessCntrls', 'Redistribute', 'SaveProperties', 'SharableDicts', 'sharable_vars', 'savekeys', 'UArg',
-           'Userwants'}
+__all__ = {'boolconvtr', 'CaS_Settings', 'create_nested_dict', 'Dirs', 'End', 'End_Error', 'Geo_Settings', 'get_dirs',
+           'proxyfunction', 'ProcessCntrls', 'Redistribute', 'SaveProperties', 'SharableDicts', 'sharable_vars',
+           'savekeys', 'UArg', 'Userwants'}
 
 boolconvtr = {'Y': True, 'N': False}
 
@@ -98,6 +99,7 @@ class End_Error:
             smd = SharedMemoryDict(name="CASORP", size=1024)
             smd.shm.close()
             smd.shm.unlink()
+            End.triggered = True
 
             sys.exit(1)
 
@@ -118,13 +120,14 @@ class get_dirs:
 
 
 class Redistribute:
-    def __init__(self):
+    def __init__(self, t):
         for key in SharableDicts().smd.keys():
             exec(f'{key} = SharableDicts().smd[key]')
         self.populate_processresults(self, 'perfect')
         self.populate_processresults(self, 'defect')
 
         SharableDicts().smd.shm.close()
+        print('time taken from entering rooting to finish redistribute is', time.time()-t)
 
     @get_dirs
     def populate_processresults(self, type, n, r, c):
@@ -145,12 +148,69 @@ class ResultsUpdate:
 
 # class properties
 
+class Ctl_Settings:
+    def __init__(self):
+        self._defining_except_found = None
+        self._e2_defining, self._i_define = {"perfect": [], "defect": []}, {"defect": []}
+
+    @property
+    def defining_except_found(self):
+        """
+            defining_exept_found(bool) : Indication of whether defect subdirectories have been found to be missing
+                                         files needed for working out which atoms are related to defect.
+        """
+
+        return self._defining_except_found
+
+    @defining_except_found.setter
+    def defining_except_found(self, bool):
+        """
+            bool(bool)                 : To be turned True when a defect subdirectory is found to be missing
+                                         file(s) needed for working out which atoms are related to defect.
+        """
+
+        self._defining_except_found = bool
+
+    @property
+    def e2_defining(self):
+        """
+            execpt2_defining(dict)     : Record of all subdirectories in which needed files for working out which
+                                         atoms are related to defect were missing.
+        """
+
+        return self._e2_defining
+
+    @e2_defining.setter
+    def e2_defining(self, dict):
+        """
+            dict(dict)                 : Updated version of dictionary to replace with.
+        """
+
+        self._e2_defining = dict
+
+    @property
+    def i_defining(self):
+        """
+            Inter_defining(dict)       : Record of subdirectories to have their inital xyz file checked for in other
+                                         subdirectories of the same project name and charge state.
+        """
+
+        return self._i_define
+
+    @i_defining.setter
+    def i_defining(self, dict):
+        """
+            dict(dict)                 : Updated version of dictionary to replace with.
+        """
+
+        self._i_define = dict
+
 class CaS_Settings:
 
     def __init__(self):
         self._nn_and_def, self._cont_bdr = None, None
         self._bader_missing, self._bader_break, self._dirs_missing_bader = None, None, {"perfect": [], "defect": []}
-        self._nn_and_def_except_found, self._e2n_a_d, self._i_nad = None, {"perfect": [], "defect": []}, {"defect": []}
+        # self._nn_and_def_except_found, self._e2n_a_d, self._i_nad = None, {"perfect": [], "defect": []}, {"defect": []}
 
     @property
     def nn_and_def(self):
@@ -220,57 +280,69 @@ class CaS_Settings:
 
         self._dirs_missing_bader = dict
 
+    # @property
+    # def nn_and_def_except_found(self):
+    #     """
+    #         nn_and_def_exept_found(bool) : Indication of whether defect subdirectories have been found to be missing
+    #                                        files needed for working out which atoms are related to defect.
+    #     """
+    #
+    #     return self._nn_and_def_except_found
+    #
+    # @nn_and_def_except_found.setter
+    # def nn_and_def_except_found(self, bool):
+    #     """
+    #         bool(bool)                   : To be turned True when a defect subdirectory is found to be missing
+    #                                        file(s) needed for working out which atoms are related to defect.
+    #     """
+    #
+    #     self._nn_and_def_except_found = bool
+    #
+    # @property
+    # def e2n_a_d(self):
+    #     """
+    #         execpt2nn_and_def(dict)      : Record of all subdirectories in which needed files for working out which
+    #                                        atoms are related to defect were missing.
+    #     """
+    #
+    #     return self._e2n_a_d
+    #
+    # @e2n_a_d.setter
+    # def e2n_a_d(self, dict):
+    #     """
+    #         dict(dict)                   : Updated version of dictionary to replace with.
+    #     """
+    #
+    #     self._e2n_a_d = dict
+    #
+    # @property
+    # def i_nad(self):
+    #     """
+    #         Inner_nn_and_def(dict)       : Record of subdirectories to have their inital xyz file checked for in other
+    #                                        subdirectories of the same project name and charge state.
+    #     """
+    #
+    #     return self._i_nad
+    #
+    # @i_nad.setter
+    # def i_nad(self, dict):
+    #     """
+    #         dict(dict)                   : Updated version of dictionary to replace with.
+    #     """
+    #
+    #     self._i_nad = dict
+
+class End:
+    def __init__(self):
+        self._triggered = None
+
     @property
-    def nn_and_def_except_found(self):
-        """
-            nn_and_def_exept_found(bool) : Indication of whether defect subdirectories have been found to be missing
-                                           files needed for working out which atoms are related to defect.
-        """
+    def triggered(self):
+        return self._triggered
 
-        return self._nn_and_def_except_found
-
-    @nn_and_def_except_found.setter
-    def nn_and_def_except_found(self, bool):
-        """
-            bool(bool)                   : To be turned True when a defect subdirectory is found to be missing
-                                           file(s) needed for working out which atoms are related to defect.
-        """
-
-        self._nn_and_def_except_found = bool
-
-    @property
-    def e2n_a_d(self):
-        """
-            execpt2nn_and_def(dict)      : Record of all subdirectories in which needed files for working out which
-                                           atoms are related to defect were missing.
-        """
-
-        return self._e2n_a_d
-
-    @e2n_a_d.setter
-    def e2n_a_d(self, dict):
-        """
-            dict(dict)                   : Updated version of dictionary to replace with.
-        """
-
-        self._e2n_a_d = dict
-
-    @property
-    def i_nad(self):
-        """
-            Inner_nn_and_def(dict)       : Record of subdirectories to have their inital xyz file checked for in other
-                                           subdirectories of the same project name and charge state.
-        """
-
-        return self._i_nad
-
-    @i_nad.setter
-    def i_nad(self, dict):
-        """
-            dict(dict)                   : Updated version of dictionary to replace with.
-        """
-
-        self._i_nad = dict
+    @triggered.setter
+    def triggered(self, bool):
+        self._triggered = bool
 
 class Dirs:
     """
@@ -332,11 +404,12 @@ class Dirs:
 
         self._executables_address = string
 
-class G_Settings:
+class Geo_Settings:
 
     def __init__(self):
         self._nn_dict, self._bonds = {"perfect": dict(), "defect": dict()}, {"perfect": dict(), "defect": dict()}
         self._perf_Lxyz = ''
+
 
     @property
     def nn_dict(self):

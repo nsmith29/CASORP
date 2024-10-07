@@ -2,37 +2,38 @@
 
 import multiprocessing as mp
 import multiprocessing.pool
-import os
-import psutil
-from shared_memory_dict import SharedMemoryDict
-import signal
-import sys
-import traceback as tb
-import threading as th
+# import os
+# import psutil
+# from shared_memory_dict import SharedMemoryDict
+# import signal
+# import sys
+# import traceback as tb
+import time
+# import threading as th
 from Core.CentralDefinitions import Redistribute
 from Core.DictsAndLists import optdict
 from DataProcessing.ChargesSpins import CntrlChrgSpns
+from DataProcessing.Geometry import CntrolGeometry
 
 
 __all__ = { 'ProcessNoDaemonProcess', 'PoolNoDaemonProcess', 'Rooting'}
 
 
-def sendkillSignal(error, value, tb_):
-    sys.exit(1)
-
-
-class Thread(th.Thread):
-
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon = None):
-        th.Thread.__init__(self, group, target, name, args, kwargs)
-        self.original_run = self.run()
-        self.run = self.patched_run()
-
-    def patched_run(self):
-        try:
-            self.original_run()
-        except:
-            sendkillSignal(*sys.exc_info())
+# def sendkillSignal():#error, value, tb_):
+#     sys.exit(1)
+#
+# class Thread(th.Thread):
+#
+#     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon = None):
+#         th.Thread.__init__(self, group, target, name, args, kwargs)
+#         self.original_run = self.run()
+#         self.run = self.patched_run()
+#
+#     def patched_run(self):
+#         try:
+#             self.original_run()
+#         except:
+#             sendkillSignal()#*sys.exc_info())
 
 class ProcessNoDaemonProcess(mp.Process):
     """
@@ -68,7 +69,6 @@ class ProcessNoDaemonProcess(mp.Process):
         """
         pass
 
-
 class PoolNoDaemonProcess(mp.pool.Pool):
     """
         Modified version of mp.pool.Pool specific for this package for mp.Pool() non-daemonic workers.
@@ -94,7 +94,6 @@ class PoolNoDaemonProcess(mp.pool.Pool):
 
         return proc
 
-
 class Rooting:
     """
         Rooting of mp.Pool() child process to specific code stem for wanted result processing method of child process.
@@ -114,6 +113,7 @@ class Rooting:
     """
 
     def __init__(self, want):
-        Redistribute()
+        t = time.time()
+        Redistribute(t)
         run = eval(str("{}()".format(optdict.get(want))))
 

@@ -388,9 +388,9 @@ class pop2(SaveProperties, Pop):
         """
         # smd = SharedMemoryDict("CASORP", size=1024)
         addressbook, calckeys = SharableDicts().smd[str('Dirs.address_book')], SharableDicts().smd[str('Dirs.dir_calc_keys')]
-        # print(pop2.os_path, addressbook['perfect'], [p for p in ( addressbook['perfect'][n][r][c]['log'] for n,r,c in ([n,r,c] for n,r,c in calckeys['perfect'] ) ) ], 'DC.L L391' )
+        # print(pop2.os_path, addressbook['perfect'], [p for p in ( addressbook['perfect'][n][r][c]['log'] for n,r,c in ([n,r,c] for n,r,c in calckeys['perfect'] ) ) ], '[DC.L L391]' )
         for p in (p for p in [addressbook['perfect'][n][r][c]['log'] for n, r, c in ([n, r, c] for n, r, c in calckeys['perfect']) ] if p == pop2.os_path):
-            # print(p, 'DC.L L393')
+            # print(p, '[DC.L L393]')
             SharableDicts().smd['total atoms'] = atoms
 
         collect = []

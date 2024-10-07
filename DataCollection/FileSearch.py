@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-import json
+# import json
 import multiprocessing as mp
 import numpy as np
 import os
 import queue
 import subprocess
-import time
+# import time
 import threading as th
-from shared_memory_dict import SharedMemoryDict
+# from shared_memory_dict import SharedMemoryDict
 
 from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, ProcessCntrls, TESTING, UArg
 from Core.DictsAndLists import  files4res, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
-    multiplefiles4extension
+    multiplefiles4extension, restrictions
 from Core.Messages import ProcessTakingPlace, ErrMessages, Global_lock
 from DataCollection.FromFile import ResultsRetrieve
 from DataCollection.Inp import xyz1st
@@ -63,9 +63,13 @@ class Finding:
 
         met, layer_met, not_, num_met, fnd_list, meet_list, to_meet, indx, = self.set_vars(True) if cond == "" else \
             self.set_vars(False, cond)
+        if TESTING.in_progress is True:
+            print('met =', met, 'extension =', self.extension, '[DC.FS L67]')
 
         layer = {0: {"found": self.split_path[-1], "transversed": [] }}
         for (path_, dirs_, files_) in self.walk:
+            if TESTING.in_progress is True:
+                print('met = ', met, "find =", self.fnd, "layer =", self.layer, "[DC.FS L72]")
             if [i for i in path_.split('/') if i in not_]:
                 continue
 
@@ -78,6 +82,8 @@ class Finding:
                     elif num_met == to_meet:
                         break
                 else:
+                    if TESTING.in_progress is True:
+                        print("should be breaking out of method loop [DC.FS L86]")
                     break
 
             self.layer = len(str(path_).split('/')) - len(self.split_path)
@@ -128,29 +134,32 @@ class verify_only:
     def __init__(self, func):
         self._func = func
 
-    def __call__(self, self2, q_, *args):
-        t = time.time()
+    def __call__(self, self2, c_=None, q_=None):
+        # t = time.time()
         dirs = self._func(self2)
-
-        if UArg().only is True and self2.type_ == 'defect':
-            copy = UArg().fdsd.copy()
-            for dir_ in dirs:
-                for key in copy.keys():
-                    [copy.update({key: True}) if key in dir_.split('/') and copy[key] != True else copy]
-            values, keys,  = [value for value in copy.values()], [key for key in copy.keys()]
-            if True not in values:
-                q_.put('end')
-                End_Error(True in tuple([value for value in copy.values()]), ErrMessages.FileSearch_FileNotFoundError1(keys, Global_lock().lock))
-
-            # assert True in copy.values(), f"{ErrMessages.FileSearch_FileNotFoundError1([key for key in copy.keys()])}"
-            try:
-                if False in copy.values():
-                    raise FileNotFoundError
-            except FileNotFoundError:
-                ErrMessages.FileSearch_FileNotFoundError2([key for key, value in copy.items() if value is False], Global_lock().lock) # print("one of directories couldn't be found!")
-            else:
-                UArg.fdsd = copy
-        q_.put('start')
+        if c_ != None:
+            if UArg().only is True:
+                copy = UArg().fdsd.copy()
+                for dir_ in dirs:
+                    for key in copy.keys():
+                        [copy.update({key: True}) if key in dir_.split('/') and copy[key] != True else copy]
+                values, keys,  = [value for value in copy.values()], [key for key in copy.keys()]
+                if True not in values:
+                    with c_:
+                        q_.put('end')
+                        c_.notify()
+                    End_Error(True in tuple([value for value in copy.values()]), ErrMessages.FileSearch_FileNotFoundError1(keys, Global_lock().lock))
+                try:
+                    if False in copy.values():
+                        raise FileNotFoundError
+                except FileNotFoundError:
+                    ErrMessages.FileSearch_FileNotFoundError2([key for key, value in copy.items() if value is False], Global_lock().lock) # print("one of directories couldn't be found!")
+                else:
+                    UArg.fdsd = copy
+            with c_:
+                # print('pass [DC.FS L160]')
+                q_.put('start')
+                c_.notify()
         return dirs
 
 
@@ -166,7 +175,7 @@ class DirsAndLogs(Finding):
         else:
             self.condition = ""
 
-    def conditional(self):  # expt, only
+    def conditional(self):
         """
             Stating conditions to be met for any restrictions [only/except used for commandline arg[4]] set by user.
         """
@@ -192,22 +201,21 @@ class Cataloging(DirsAndLogs):
         Recording down every subdirectories with CP2K data to be included in programme execution.
     """
 
-    def __init__(self, path, type_, q_):
+    def __init__(self, path, type_, c_=None, q_=None, t=None):
+        # print(type_, 'c_=', c_, 'q_=', q_, '[DC.FS L207]')
         self.type_ = type_
         super().__init__(path, ".log", type_)
-        super().dir_tree_transversing(self, q_)
-        self.pairing(q_)
+        super().dir_tree_transversing(self, c_=c_, q_=q_) if c_ != None else super().dir_tree_transversing(self)
+        self.pairing()
+        # if t:
+            # print('defect cataloging finished in', time.time()-t, '[DC.FS L211]')
 
-    def pairing(self, q_):
+    def pairing(self):
         """
             Populating dictionaries with corresponding directory paths and file paths and data to specify each individual calculation.
         """
-        Q_ = queue.Queue()
-        # t_ = th.Thread(target=self.queue_implementation, args=(Q_,))
-        # t_.start()
         for indx, dir_, file_ in zip(range(len(self.dirpaths)), self.dirpaths, self.filepaths):
             chrg_stt, name, rn_typ = Entry4Files(file_, "log", 'original').Return()
-            # Q_.put( [self.type_, name[0], rn_typ[0], chrg_stt[0]] )
             Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict([self.type_, name[0], rn_typ[0], chrg_stt[0]],
                                                                        ["path", "log"], [dir_, file_],
                                                                        Dirs().address_book, Dirs().dir_calc_keys,
@@ -254,15 +262,21 @@ class CatalogueFinding(Finding, object):  # Finding needs path and extension.
         self.cats, self.book = None, None # Dirs().dir_calc_keys.copy(), Dirs().address_book.copy()
         self.errflggd = []
 
-    def definiting(self, base_ext):
-        self.cats, self.book, self.errflggd= Dirs().dir_calc_keys.copy(), Dirs().address_book.copy(), base_ext
+    def definiting(self, base_ext, type_, keywrd = None):
+        if keywrd in restrictions.keys():
+            self.cats = {type_ : [entry for entry in Dirs().dir_calc_keys[type_] if eval(restrictions[keywrd])]}
+            print(self.cats, '[DC.FS L266]')
+        else:
+            self.cats = Dirs().dir_calc_keys.copy()
+        self.book, self.errflggd= Dirs().address_book.copy(), base_ext
 
-    def __call__(self, self2, type_, fl_exts, section, *args):
+    def __call__(self, self2, type_, fl_exts, section, **kwargs):
         if self.cats == None:
-            self.definiting(fl_exts)
+            print(kwargs, type_, fl_exts, '[DC.FS L272]')
+            self.definiting(fl_exts, type_) if "ignore" in kwargs.keys() else self.definiting(fl_exts, type_, self2.keywrd)
 
         for n, r, c in self.cats[type_]:
-            Ars = [*args] if list(args) else []
+            Ars = [value for key, value in kwargs.items() if key == 'exchange'] if kwargs else []
             keylst = [type_, n, r, c]
             path, keys, flexts = self.book[type_][n][r][c]["path"], self.book[type_][n][r][c].keys(), []
 
@@ -300,7 +314,7 @@ class MethodFiles(Method):
 
     @CatalogueFinding
     def assessment_tree(self2, keylst, sect, extension, fnd, flpath, Q, path = None, exchange = None):
-        # print('in assessment tree', keylst, 'filepath =', flpath, 'found =', fnd, '\n\n')
+        # print('in assessment tree', keylst, 'filepath =', flpath, 'found =', fnd, '[DC.FS L314]', '\n\n')
         if exchange:
             self2.keywrd, self2.res = exchange, files4res[exchange]
         if sect is True and fnd is not True:

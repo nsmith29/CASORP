@@ -21,7 +21,7 @@ class xyz1st(SaveProperties, Update):
 
     @Iterate
     def searching(xyz, varitem, ln, lines):
-        # print('varitem', varitem, 'ln', ln, 'lines', lines, '\n')
+        # print('varitem', varitem, 'ln', ln, 'lines', lines, '\n', '[DC.I L24]')
         if varitem["locate"] in ln and varitem["found"] is False:
             index = lines.index(ln) - len(lines) + 1 if varitem["reverse"] is False else lines.index(ln)
             Update.found(xyz)

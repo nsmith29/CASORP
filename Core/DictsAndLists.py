@@ -82,7 +82,8 @@ files4res ={"band structure":{
 
                                                     ,"''.xyz"]}}            # Initial xyz file of defect calculation.
 
-                         ,"cp2k_outputs":{"perfect":["-1.xyz"               # CP2K output file of every geo opt step.,
+                    ,"standard":
+                        {"cp2k_outputs":{"perfect":["-1.xyz"               # CP2K output file of every geo opt step.,
                                                     
                                                     ".log"]                 # Lattice parameters.
 
@@ -92,7 +93,7 @@ files4res ={"band structure":{
 
                          ,"intermediary":{"perfect": ["-L.xyz"]             # disp of def final with perf final geometry.
 
-                                          , "defect": ["-L.xyz"]}           # disp of def final with perf final geometry.
+                                          , "defect": ["-L.xyz"]}}           # disp of def final with perf final geometry.
 
                          ,"final_output":[".distVdisp.png","BondLenAng.txt"]}, # File of bond length & angle dataframe.
 
@@ -215,7 +216,7 @@ inp_var_fo = {"xyz1st":{
 optdict= {"band structure": None,
           "charges and spins": "CntrlChrgSpns",
           "charge transition levels": None, #DataProcessing.CTLsetup()
-          "geometry": None, #"Presentation.geometryGUI",
+          "geometry": "CntrolGeometry",
           "IPR": None,
           "PDOS": None, # "GraphicAnalysis.plotpdos",
           "WFN": None, # "Presentation.WFNGUI",
@@ -254,3 +255,5 @@ questions = {"MQ1": str("\n{bcolors.QUESTION}Which results types would you like 
                         "datatable columns of {bcolors.METHOD}Bader analysis {bcolors.EXTRA}data for calculations which "
                         "{bcolors.METHOD}Bader analysis {bcolors.EXTRA}can be \nperformed for:"
              }
+
+restrictions = {"geometry": "'energy' not in entry"}
