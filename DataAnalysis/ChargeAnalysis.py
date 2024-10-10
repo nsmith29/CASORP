@@ -23,7 +23,7 @@ class Extraction:
                                                     "charges and spins").Return()
 
         f = Dirs.address_book[t][n][r][c]["ACF.dat"][0]
-        # print(file, SharableDicts().smd['total atoms'], 'DA.CA L26')
+        # print(file, SharableDicts().smd['total atoms'], '[DA.CA L26]')
         a  = int(SharableDicts().smd['total atoms'])
         self.bader = np.loadtxt(f, skiprows=2, usecols=4, max_rows=a, unpack=True) if CaS_Settings().bader_break is not \
                                                                                       True and [n, r, c] not in \
