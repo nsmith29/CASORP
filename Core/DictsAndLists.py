@@ -204,11 +204,11 @@ inp_var_fo = {"xyz1st": {"locate": ['COORD_FILE_NAME', "&END COORD", ['find_xyz'
 
 optdict= {"band structure": None,
           "charges and spins": "CntrlChrgSpns",
-          "charge transition levels": None, #DataProcessing.CTLsetup()
-          "geometry": "CntrolGeometry",
+          "charge transition levels": None,
+          "geometry": "CntrlGeometry",
           "IPR": None,
-          "PDOS": None, # "GraphicAnalysis.plotpdos",
-          "WFN": None, # "Presentation.WFNGUI",
+          "PDOS": None,
+          "WFN": None,
           "work function": None,
           "test": None}
 

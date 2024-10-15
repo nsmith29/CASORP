@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # import json
+import asyncio
 import sys
 import time
 from shared_memory_dict import SharedMemoryDict
