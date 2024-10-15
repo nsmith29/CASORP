@@ -5,7 +5,7 @@ import sys
 import time
 from shared_memory_dict import SharedMemoryDict
 
-__all__ = {'boolconvtr', 'CaS_Settings', 'create_nested_dict', 'Dirs', 'End', 'End_Error', 'Geo_Settings', 'get_dirs',
+__all__ = {'boolconvtr', 'CaS_Settings', 'create_nested_dict', 'Dirs', 'End', 'End_Error', 'Geo_Settings', 'GetDirs',
            'proxyfunction', 'ProcessCntrls', 'Redistribute', 'SaveProperties', 'SharableDicts', 'sharable_vars',
            'savekeys', 'UArg', 'Userwants'}
 
@@ -17,25 +17,20 @@ def savekeys(func):
     """
         Adding list of strs of dict major nested keys - name, run, and chrg - for specific calc to separate dict.
     """
-
-    def wrapper( keys, subkeys, paths, d1, d2 = None, name = None, *args):
+    def wrapper(keys, subkeys, paths, d1, d2=None, name=None, *args):
         d1 = func(keys, subkeys, paths, d1)
         if name:
             CreateSharableDicts(name[0], d1)
         if d2 is not None:
             assert isinstance(d2, dict), "d2 must be a dictionary which can be populated with list of keys"
             assert keys[0] in d2.keys(), "First str item in keys must be a key within d2"
-
             if not d2[keys[0]]:
                 d2[keys[0]] = [keys[1:]]
-            elif [keys[1], keys[2], keys[3]] not in d2[keys[0]]:
+            elif len(keys) == 4 and [keys[1], keys[2], keys[3]] not in d2[keys[0]] or len(keys) == 5 and [keys[1], keys[2], keys[3], keys[4]] not in d2[keys[0]]:
                 d2[keys[0]].append(keys[1:])
-
             if name:
                 CreateSharableDicts(name[1], d2)
-
         return d1, d2
-
     return wrapper
 
 @savekeys
@@ -110,41 +105,35 @@ class CreateSharableDicts:
         SharableDicts().smd.shm.close()
 
 
-class get_dirs:
-    def __init__(self, func):
-        self._func = func
-
-    def __call__(self, self2, type_):
+def GetDirs(func):
+    def wrapper(self2, type_):
         for n, r, c in ([n, r, c] for n, r, c in Dirs().dir_calc_keys[type_]):
-            self._func(self2, type_, n, r, c)
+            func(self2, type_, n, r, c)
+    return wrapper
 
 
 class Redistribute:
     def __init__(self, t):
         for key in SharableDicts().smd.keys():
             exec(f'{key} = SharableDicts().smd[key]')
-        self.populate_processresults(self, 'perfect')
-        self.populate_processresults(self, 'defect')
+            print(f'{key}', SharableDicts().smd[key])
+        self.populate_processresults('perfect')
+        self.populate_processresults('defect')
 
         SharableDicts().smd.shm.close()
         print('time taken from entering rooting to finish redistribute is', time.time()-t)
-
-    @get_dirs
+    @GetDirs
     def populate_processresults(self, type, n, r, c):
         ProcessCntrls.processresults, _ = create_nested_dict([type, n, r, c], ProcessCntrls().processwants,
                                                              ProcessCntrls().setup, ProcessCntrls().processresults, None)
 
 
 class ResultsUpdate:
-
     def __init__(self, func):
         self._func = func
-
-    def __call__(self, self2, method, *args, **kwargs):
-        result = self._func(self2)
-        # print(ProcessCntrls().processresults, 'C.CD L49')
-        ProcessCntrls().processresults[self2.t][self2.n][self2.r][self2.c].update({method : result})
-
+    async def __call__(self, t, n, r, c, *args):
+        method, result = await self._func(t, n, r, c, *args)
+        ProcessCntrls().processresults[t][n][r][c].update({method : result})
 
 # class properties
 
@@ -279,58 +268,6 @@ class CaS_Settings:
         """
 
         self._dirs_missing_bader = dict
-
-    # @property
-    # def nn_and_def_except_found(self):
-    #     """
-    #         nn_and_def_exept_found(bool) : Indication of whether defect subdirectories have been found to be missing
-    #                                        files needed for working out which atoms are related to defect.
-    #     """
-    #
-    #     return self._nn_and_def_except_found
-    #
-    # @nn_and_def_except_found.setter
-    # def nn_and_def_except_found(self, bool):
-    #     """
-    #         bool(bool)                   : To be turned True when a defect subdirectory is found to be missing
-    #                                        file(s) needed for working out which atoms are related to defect.
-    #     """
-    #
-    #     self._nn_and_def_except_found = bool
-    #
-    # @property
-    # def e2n_a_d(self):
-    #     """
-    #         execpt2nn_and_def(dict)      : Record of all subdirectories in which needed files for working out which
-    #                                        atoms are related to defect were missing.
-    #     """
-    #
-    #     return self._e2n_a_d
-    #
-    # @e2n_a_d.setter
-    # def e2n_a_d(self, dict):
-    #     """
-    #         dict(dict)                   : Updated version of dictionary to replace with.
-    #     """
-    #
-    #     self._e2n_a_d = dict
-    #
-    # @property
-    # def i_nad(self):
-    #     """
-    #         Inner_nn_and_def(dict)       : Record of subdirectories to have their inital xyz file checked for in other
-    #                                        subdirectories of the same project name and charge state.
-    #     """
-    #
-    #     return self._i_nad
-    #
-    # @i_nad.setter
-    # def i_nad(self, dict):
-    #     """
-    #         dict(dict)                   : Updated version of dictionary to replace with.
-    #     """
-    #
-    #     self._i_nad = dict
 
 class End:
     def __init__(self):
@@ -530,7 +467,6 @@ class SaveProperties:
 class SharableDicts:
     def __init__(self):
         self._smd = SharedMemoryDict("CASORP", size=1024)
-
     @property
     def smd(self):
         return self._smd
@@ -538,11 +474,9 @@ class SharableDicts:
 class TESTING:
     def __init__(self):
         self._in_progress = False
-
     @property
     def in_progress(self):
         return self._in_progress
-
     @in_progress.setter
     def in_progress(self, bool):
         self._in_progress = bool
@@ -698,7 +632,7 @@ class Userwants:
     """
 
     def __init__(self):
-        self.analysiswants, self.displaywants, self._append, self._overwrite = None, None, None, None
+        self._analysiswants, self._displaywants, self._append, self._overwrite = None, None, None, None
 
     @property
     def analysiswants(self):
