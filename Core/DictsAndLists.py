@@ -154,7 +154,7 @@ log_want = {"band structure": [
                                 "a"],
 
             "original": [
-                                "charge", "name", "run"],
+                                "name", "run", "charge"],
 
             "all":[
                                 "a","at_crd","charge","energy","gap","knd_atms","name","pop1","pop2","run","version"],
@@ -163,55 +163,44 @@ log_want = {"band structure": [
                                 "at_crd"]
 }
 
-log_var_fo = {"a":{
-                   "locate": '|a|', "via": "find_a", "found": False, "reset": None, "reverse": True},
+log_var_fo = {"a": {"locate": '|a|', "via": "find_a", "reverse": True, "kwargs": ['index={indx}', 'lines={lines_}']},
 
-              "at_crd":{
-                   "locate": "MODULE QUICKSTEP:  ATOMIC COORDINATES IN angstrom", "via": "find_at", "found": False,
-                   "reset": None, "reverse": True},
+              "at_crd": {"locate": "MODULE QUICKSTEP:  ATOMIC COORDINATES IN angstrom", "via": "find_at",
+                         "reverse": True, "kwargs": ['index={indx}', 'lines={lines_}']},
 
-              "charge":{
-                   "locate": " DFT| Charge", "via": "find_charge", "found": False, "reset": None, "reverse": False},
+              "charge": {"locate": " DFT| Charge", "via": "find_charge", "reverse": False, "kwargs": ['_={indx}']},
 
-              "energy":{
-                   "locate": "ENERGY| Total FORCE_EVAL", "via": "find_energy", "found": False, "reset": None, "reverse": False},
+              "energy": {"locate": "ENERGY| Total FORCE_EVAL", "via": "find_energy", "reverse": False,
+                         "kwargs": ['_={indx}']},
 
-              "gap":{
-                   "locate": "HOMO - LUMO gap", "via": "find_gap", "found": False, "reset": None, "reverse": False},
+              "gap": {"locate": "HOMO - LUMO gap", "via": "find_gap", "reverse": False,
+                      "kwargs": ['index={indx}', 'lines={lines_}']},
 
-              "knd_atms":{
-                   "locate": "Atomic kind", "via": "find_kind", "found": False, "num": None, "cnt": None,
-                   "reset": ["num", None, "count", None], "reverse": False},
+              "knd_atms": {"locate": ["Atomic kind"], "via": "find_kind", "reverse": False, "kwargs": ['_={indx}']},
 
-              "name":{
-                   "locate": " GLOBAL| Project name", "via": "find_name", "found": False, "reset": None, "reverse": False},
+              "name": {"locate": " GLOBAL| Project name", "via": "find_name", "reverse": False, "kwargs": ['_={indx}']},
 
-              "pop1":{
-                   "locate": ["Total charge and spin", "Mulliken Population Analysis"], "via": "find_pop1", "n" : 2,
-                   "found": False, "num": None, "reset": ["num", None], "reverse": False},
+              "pop1": {"locate": ["Total charge and spin", "Mulliken Population Analysis"], "via": "find_pop1", "n": 1,
+                       "num": None, "reverse": False, "kwargs": ['index={indx}', 'lines={lines_}']},
 
-              "pop2":{
-                   "locate": ["Total Charge", 'Hirshfeld Charges'], "via": "find_pop2", "found": False, "n" : 3,
-                   "num": None, "reset": ["num", None], "reverse": False},
+              "pop2": {"locate": ["Total Charge", 'Hirshfeld Charges'], "via": "find_pop2", "n": 2, "num": None,
+                       "reverse": False, "kwargs": ['index={indx}', 'lines={lines_}', 'path="{os_path}"']},
 
-              "run":{
-                   "locate": " GLOBAL| Run type", "via": "find_run", "found": False, "reset": None, "reverse": False},
+              "run": {"locate": " GLOBAL| Run type", "via": "find_run", "reverse": False, "kwargs": ['_={indx}']},
 
-              "version":{
-                   "locate": " CP2K| version string:", "via": "find_version", "found": False, "reset": None, "reverse": False}
+              "version": {"locate": " CP2K| version string:", "via": "find_version", "reverse": False,
+                          "kwargs": ['_={indx}']}
+              }
+
+inp_want = {"charges and spins": ["xyz1st"],
+            "geometry": ["xyz1st"]
 }
 
-inp_want = {"charges and spins": [
-                "xyz1st"],
-            "geometry": [
-                "xyz1st"]
-}
-
-inp_var_fo = {"xyz1st":{
-                   "locate": 'COORD_FILE_NAME', "via": 'find_xyz', "check": "&TOPOLOGY", "swapped": False,
-                   "alt": "&END COORD", "alt_via": "make_xyz", "found": False,
-                   "switch": ["locate", "via", "alt", "alt_via", "alt", "alt_via", "locate", "via"], "reverse": False}
-}
+inp_var_fo = {"xyz1st": {"locate": ['COORD_FILE_NAME', "&END COORD", ['find_xyz', "make_xyz"]], "via": "xyz",
+                         "check": "&TOPOLOGY", "reverse": False,
+                         "kwargs": ['index={indx}', 'lines={lines_}', 'funcs={varitem["locate"][2]}',
+                                    'path="{os_path}"']}
+              }
 
 optdict= {"band structure": None,
           "charges and spins": "CntrlChrgSpns",
@@ -256,4 +245,4 @@ questions = {"MQ1": str("\n{bcolors.QUESTION}Which results types would you like 
                         "{bcolors.METHOD}Bader analysis {bcolors.EXTRA}can be \nperformed for:"
              }
 
-restrictions = {"geometry": "'energy' not in entry"}
+restrictions = {"geometry": "'ENERGY' not in entry"}
