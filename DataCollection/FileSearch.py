@@ -1,37 +1,28 @@
 #!/usr/bin/env python3
 
-# import json
 import asyncio
 from asgiref.sync import sync_to_async
-import multiprocessing as mp
 import numpy as np
 import os
-import queue
 import subprocess
-# import time
-import threading as th
-# from shared_memory_dict import SharedMemoryDict
 
-from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, ProcessCntrls, TESTING, UArg
+from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg
 from Core.DictsAndLists import  files4res, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
-from Core.Messages import ProcessTakingPlace, ErrMessages, Global_lock
+from Core.Messages import ErrMessages, Global_lock
 from DataCollection.FromFile import iterate
-# from DataCollection.Inp import xyz1st
-
-
 
 __all__ = {'Finding', 'verify_only', 'DirsAndLogs', 'Cataloging', 'Entry4FromFiles', 'MakingIntermediaryFiles'}
-
-
 
 class Finding:
     """
         Finding specific files needed for particular result processing methods inside directories of CP2K output files.
     """
-    def __init__(self, path, extension):
+    def __init__(self, path, extension, async_=False):
         self.split_path, self.extension, self.layer, self.walk = path.split('/'), extension, 0, os.walk(path)
         self.dirpaths, self.filepaths, self.fnd = [], [], None
+        if async_ is True:
+            self.dir_tree_transversing()
     def set_vars(self, bool_, cond_ = None):
         if bool_ == True:
             met, layer_met, meet_list, to_meet, indx, num_met, fnd_list = True, 0, None, None, None, None, None
@@ -110,6 +101,8 @@ class Finding:
             self.fnd = False if self.fnd == None else self.fnd
         if len(self.filepaths) > 1:
             self.check_num_of_filepaths()
+    def returning(self):
+        return self.fnd, self.filepaths
 
 class verify_only:
     """
@@ -151,31 +144,25 @@ class DirsAndLogs(Finding):
     """
         Searching for individual subdirectories holding CP2K output files via finding .log files.
     """
-
     def __init__(self, path, extension, type_):
         super().__init__(path, extension)
         if type_ == "defect":
             self.condition = self.conditional()
         else:
             self.condition = ""
-
     def conditional(self):
         """
             Stating conditions to be met for any restrictions [only/except used for commandline arg[4]] set by user.
         """
-
         conditions = {"[True][False]": str("not path_.endswith(tuple(UArg.subd))"),
                       "[False][True]": str("path_.endswith(tuple(UArg.subd))"),
                       "[False][False]": ""}
-
         return conditions.get(str("[{}][{}]".format(UArg().expt, UArg().only)))
-
     @verify_only
     def dir_tree_transversing(self):
         """
             Overriding .dir_tree_transversing to search directory tree with conditions for gaining the correct subdirectories applied.
         """
-
         super().dir_tree_transversing(self.condition)
         return self.dirpaths
 
@@ -183,35 +170,22 @@ class Cataloging(DirsAndLogs):
     """
         Recording down every subdirectories with CP2K data to be included in programme execution.
     """
-
     def __init__(self, path, type_, c_=None, q_=None, t=None):
         # print(type_, 'c_=', c_, 'q_=', q_, '[DC.FS L206]')
         self.type_ = type_
         super().__init__(path, ".log", type_)
         super().dir_tree_transversing(self, c_=c_, q_=q_) if c_ != None else super().dir_tree_transversing(self)
         asyncio.run(self.pairing())
-        # if t:
-            # print('defect cataloging finished in', time.time()-t, '[DC.FS L212]')
-
     async def pairing(self):
         """
             Populating dictionaries with corresponding directory paths and file paths and data to specify each individual calculation.
         """
         async for item in async_pairing_iterator(self.filepaths, self.dirpaths):
             outer_keys, inner_keys, inner_values = item
-            print(outer_keys)
             outer_keys.insert(0, self.type_)
             Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict(outer_keys, inner_keys, inner_values,
                                                                        Dirs().address_book, Dirs().dir_calc_keys,
                                                                    ["Dirs.address_book", "Dirs.dir_calc_keys"])
-            # except:
-            #     print(item)
-
-
-        # Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict([self.type_, name[0], rn_typ[0], chrg_stt[0]],
-        #                                                            ["path", "log"], [dir_, file_],
-        #                                                            Dirs().address_book, Dirs().dir_calc_keys,
-        #                                                            ["Dirs.address_book", "Dirs.dir_calc_keys"])
 
 class async_pairing_iterator():
     """

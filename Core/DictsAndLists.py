@@ -217,25 +217,20 @@ questions = {"MQ1": str("\n{bcolors.QUESTION}Which results types would you like 
                         + f"{', '.join(options[0:6])} "
                         +"                            "
                         +f" {', '.join(options[6:9])}" ),
-
              "MQ2": str("\n{bcolors.QUESTION}Would you like to perform data analysis?({bcolors.OPTIONS}Y/N"
                         "{bcolors.QUESTION}){bcolors.ENDC}{bcolors.EXTRA}\nSelecting {bcolors.OPTIONS}'N'"
                         "{bcolors.EXTRA} will generate png files of analysed results: "),
-
              "MQ2fup1": "\n{bcolors.QUESTION}Would you like to create a GUI to display results?({bcolors.OPTIONS}"
                         "Y/N{bcolors.QUESTION}){bcolors.ENDC}{bcolors.EXTRA}\nSelecting {bcolors.OPTIONS}'N'"
                         "{bcolors.EXTRA} will generate png files of analysed results: ",
-
              "MQ2fup2": "{bcolors.EXTRA}If processed_data.txt already exists, data processed in this run will "
                         "be appended to file{bcolors.QUESTION}\nWould you like to overwrite this file?("
                         "{bcolors.OPTIONS}Y/N{bcolors.QUESTION}){bcolors.ENDC}",
-
              "CaSQ1":   "\n{bcolors.QUESTION}Would you like to process {bcolors.METHOD}charge and spin data for only "
                         "atoms related to defect{bcolors.QUESTION}, i.e. nearest neighbouring atoms to defect site and"
                         " defect atom, if present?({bcolors.OPTIONS}Y/N{bcolors.QUESTION}){bcolors.EXTRA}\nSelecting "
                         "{bcolors.OPTIONS}'N'{bcolors.EXTRA} will result in charge and spins being processed "
                         "for all atoms within a calculation:",
-
              "CaSQ2":   "\n{bcolors.QUESTION}Would you like to continue with {bcolors.METHOD}Bader charge analysis "
                         "{bcolors.QUESTION}for the found subdirectories which do contain the required files for this "
                         "charge analysis method?({bcolors.OPTIONS}Y/N{bcolors.QUESTION}){bcolors.EXTRA}\n"

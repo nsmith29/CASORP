@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
-import sys
 
-from Core.DictsAndLists import inp_var_fo, inp_want
-from Core.CentralDefinitions import SaveProperties
 
 __all__ = {'xyz', 'find_xyz', 'make_xyz'}
 

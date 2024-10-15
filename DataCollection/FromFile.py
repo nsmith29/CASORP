@@ -2,11 +2,10 @@
 
 import aiofiles
 import asyncio
-import multiprocessing as mp
-from  Core.CentralDefinitions import TESTING
 from Core.DictsAndLists import inp_var_fo, inp_want, log_var_fo, log_want
 from DataCollection.Log import find_a, find_at, find_charge, find_energy, find_gap, find_kind, find_name, find_pop1, \
     find_pop2, find_run, find_version
+from DataCollection.Inp import xyz
 
 
 __all__ = {'Update', 'inline', 'Lines_iterator', 'AsyncIterateManager', 'read_file_async', 'iterate'}

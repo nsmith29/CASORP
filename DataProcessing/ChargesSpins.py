@@ -1,124 +1,84 @@
 #!/usr/bin/env python3
 
-# import json
-# import numpy as np
-# import os
-import queue
+
+import asyncio
+from asgiref.sync import sync_to_async
 import sys
-import threading as th
 import time
 
 from Core.CentralDefinitions import boolconvtr, CaS_Settings, Ctl_Settings, Dirs, proxyfunction, UArg, ProcessCntrls
-from Core.Messages import ask_question, Delay_Print, ErrMessages, Global_lock, SlowMessageLines
+from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLines
 from DataProcessing.ProcessCntral import Files4DefiningDefect
-from DataAnalysis.ChargeAnalysis import Prep
-from DataCollection.FileSearch import Entry4Files, MethodFiles, Method
+from DataAnalysis.ChargeAnalysis import retrieval, percalcdir
+from DataCollection.FileSearch import  MethodFiles
 
 __all__ = {'CntrlChrgSpns', 'BaderProcessing', 'OnlyProcessing'}
 
 
-def CntrlChrgSpns():
-
+async def CntrlChrgSpns():
+    # Main Asyncio task - set up subtasks
     text = str("\n                                      {bcolors.METHOD}{bcolors.UNDERLINE}CHARGE AND SPIN DATA "
                "PROCESSING{bcolors.ENDC}{bcolors.METHOD}...")
-
     SlowMessageLines(text)
+    event = asyncio.Event()
+    coroutines = [ThreadOne(event), ThreadTwo(event)]
+    tasks = await asyncio.gather(*coroutines)
+    print(tasks)
 
-    Q1_, Q2_ = queue.Queue(), queue.Queue()
+async def ThreadOne(e1):
+    print('in thread 1 [code L1402]')
+    result = await  sync_to_async(ask_question)("CaSQ1", "YorN", ['Y', 'N'])
+    CaS_Settings.nn_and_def = boolconvtr[result]
+    e1.set()
+    await asyncio.sleep(0.5)
+    e1.clear()
+    await asyncio.sleep(0.2)
+    if CaS_Settings().bader_missing is True:
+        if CaS_Settings().nn_and_def is True:
+            await OnlyProcessing()
+            await e1.wait()
+            if Ctl_Settings().defining_except_found is True:
+                ErrMessages.CaS_FileNotFoundError(Ctl_Settings().e2_defining['defect'], ".inp and ''.xyz",
+                                                  "charges and spins "
+                                                  "analysis of only defect-related atoms")
+        else:
+            await e1.wait()
+    else:
+        await percalcdir(retrieval)('defect')
+    return True
+    # 1. Ask question CaSQ1
+    # 2. if True, OnlyProcessing; if False, wait for answer to whether there is errors from BaderProcessing
 
-    t1 = th.Thread(target=ThreadOne, args=(Q1_, Q2_))
-    t2 = th.Thread(target=ThreadTwo, args=(Q1_, Q2_))
-
-    [x.start() for x in [t1, t2]]
-    [x.join() for x in [t1, t2]]
-
-
-class ThreadOne:
-    def __init__(self, Q1_, Q2_):
-        # out_msg -> msg to sent to threadtwo; in_msg -> msg sent from threadtwo
-        self._out_msg, self._in_msg, self._exist = Q1_, Q2_, False
-        with Global_lock().lock:
-            CaS_Settings.nn_and_def = boolconvtr[ask_question("CaSQ1", "YorN", ['Y', 'N'])]
-        self._out_msg.put('check_error')
-        self.control_tree(str(CaS_Settings().nn_and_def).lower())
-
-    def control_tree(self, bool_):
-        while self._exist is False:
-            # OnlyProcessing should only be done if answer to CaSQ1 is yes - NEW: then need to check if geometry was in
-            # imputted wants of user to work out whether OnlyProcessing should be done - Will need to use
-            # SharedMemoryDict to transfer information [like the g_settings equivalent of e2n_a_d and i_nad] between
-            # geometry, and charges and spins processes.
-            # In geometry branch will need to test for Charges and Spins in
-            while self._in_msg.empty() is False:
-                item = self._in_msg.get()
-                do = eval("self.{}_{}()".format(bool_, item)) if item != 'end' else eval("self.{}()".format(item))
-            while self._in_msg.empty() is True:
-                time.sleep(0.5)
-
-    def true_set_off(self):
-        OnlyProcessing()
-        self._out_msg.put('set_off_perf')
-        if Ctl_Settings().defining_except_found is True:
-            ErrMessages.CaS_FileNotFoundError(Ctl_Settings().e2_defining['defect'], ".inp and ''.xyz", "charges and spins "
-                                                "for only defect-related atoms", Global_lock().lock)
-
-    def false_set_off(self):
-        while CaS_Settings.cont_bdr is None:
-            time.sleep(0.5)
-        self._out_msg.put('set_off_perf')
-        Prep('defect')
-            # self._out_msg.put('end')
-
-    def end(self):
-        self._exist = True
-        sys.exit(0)
-
-
-class ThreadTwo:
-
-    def __init__(self, Q1_, Q2_):
-        # out_msg -> msg to sent to threadone; in_msg -> msg sent from threadone
-        self._out_msg, self._in_msg, self._exist = Q2_, Q1_, False
-        self.control_tree()
-
-    def control_tree(self):
-        BaderProcessing()
-        while self._exist is False:
-            while self._in_msg.empty() is False:
-                item = self._in_msg.get()
-                do = eval("self.{}()".format(item))
-
-            while self._in_msg.empty() is True:
-                time.sleep(0.5)
-
-    def check_error(self):
-        self._out_msg.put('set_off')
-        if CaS_Settings.bader_missing is True:
-            ErrMessages.CaS_FileNotFoundError(CaS_Settings().dirs_missing_bader['defect'], "-ELECTRON_DENSITY-1_0.cube",
-                                              "analysis of Bader charges of atoms", Global_lock().lock)
-            CaS_Settings.cont_bdr = boolconvtr[ask_question("CaSQ2", "YorN", ["Y", "N"])]
-
-        if CaS_Settings.bader_missing is True:
-            for calclist in CaS_Settings().dirs_missing_bader['defect']:
-                _ = calclist.pop(3)
-
-    def set_off_perf(self):
-        Prep('perfect')
-
-    def end(self):
-        print('existing', 'DP.CS L100')
-        self._out_msg.put('end')
-        self._exist = True
-        sys.exit(0)
-
+async def ThreadTwo(e1):
+    t = time.time()
+    await BaderProcessing().setoffassessment()
+    await e1.wait()
+    if CaS_Settings().bader_missing is True:
+        await asyncio.sleep(0.2)
+        ErrMessages.CaS_FileNotFoundError(CaS_Settings().dirs_missing_bader['defect'], "-ELECTRON_DENSITY-1_0.cube",
+                                              "analysis of Bader charges of atoms")
+        result = await sync_to_async(ask_question)("CaSQ2", "YorN", ["Y", "N"])
+        CaS_Settings.cont_bdr = boolconvtr[result]
+        e1.set()
+        for calclist in CaS_Settings().dirs_missing_bader['defect']:
+            _ = calclist.pop(3)
+    await asyncio.sleep(0.5)
+    await percalcdir(retrieval)('perfect')
+    return True
+    # 1. BaderProcessing
+    # 2. Check for errors from BaderProcessing
 
 class BaderProcessing(MethodFiles):
-
     def __init__(self2):
-        super().__init__('charges and spins','bader')
-        super().assessment_tree(self2, self2.type_, self2.flexts, self2.sect)
-
-    def option4(self2, kl, extension):
+        super().__init__('charges and spins', 'bader')
+    @classmethod
+    async def setoffassessment(cls):
+        self2 = cls()
+        for type_, flexts in zip(self2.types, self2.flexts_):
+            self2.type_, self2.flexts = type_, flexts
+            await super().assessment_tree(self2, self2.type_, self2.flexts, self2.sect)
+    async def option4(self2, kl, extension):
+        await asyncio.sleep(0.01)
         try:
             if kl[0] == 'perfect':
                 raise ConnectionAbortedError
@@ -131,70 +91,13 @@ class BaderProcessing(MethodFiles):
             sys.exit(0)
         except FileNotFoundError:
             CaS_Settings.bader_missing = True
-            dp = '/'.join([d for d in str(Dirs().address_book[kl[0]][kl[1]][kl[2]][kl[3]]["path"]).split('/') if d not
-                           in str(UArg().cwd).split('/')])
+            dp = '/'.join([d for d in str(Dirs().address_book[kl[0]][kl[1]][kl[2]][kl[3]]["path"]).split('/') if d not in str(UArg().cwd).split('/')])
             kl.append(dp)
             _, CaS_Settings.dirs_missing_bader = proxyfunction(kl, None, None, None, CaS_Settings().dirs_missing_bader)
 
-class OnlyProcessing():#MethodFiles):
-    def __init__(self2):
-        if 'geometry' in ProcessCntrls.processwants:
-            print("geometry should have worked this out already [DP.CaS L140]")
-        else:
-            Files4DefiningDefect("charges and spins", "only")
-
-
-    #     Method.__init__(self2, 'charges and spins', 'only')
-    #     super().assessment_tree(self2, self2.types[1], [self2.flexts_[1][0]], False)
-    #     super().assessment_tree(self2, self2.types[0], self2.flexts_[0], True, None, 'geometry')
-    #
-    # def option2(self2, keylst, extension, flpath, Q):
-    #     return exec(f'self2.option2{keylst[0]}(keylst, extension, flpath, Q)')
-    #
-    # def option2defect(self2, k, et, flpath, Q):
-    #     paths, rtn, fnd = et if et == '.inp' else self2.flexts_[1][1], 'pass' if et == '.inp' else 'continue', \
-    #                       False if et != '.inp' else None
-    #     Dirs.address_book, _ = create_nested_dict(k, [paths], [flpath], Dirs().address_book)
-    #     if et == '.inp':
-    #         xyzname = Entry4Files(flpath[0], 'inp', 'charges and spins').Return()
-    #         Q.put([False, [xyzname[1]] ])
-    #     else:
-    #         if CaS_Settings().nn_and_def_except_found is True:
-    #             for n,r,c,e in ([n,r,c,e] for n,r,c,e in CaS_Settings().i_nad['defect'] if n==k[1] and r==k[2] and e==et):
-    #                 Dirs.address_book, _ = create_nested_dict(['defect', n, r, c], [str(paths + '*')], [flpath],
-    #                                                           Dirs().address_book)
-    #                 path = [p for n_, r_, c_, p in CaS_Settings().e2n_a_d['defect'] if  n_==n and r_==r and c_==c][0]
-    #                 CaS_Settings().e2n_a_d['defect'].remove([n, r, c, path])
-    #                 CaS_Settings().i_nad['defect'].remove([n, r, c, e])
-    #     return rtn
-    #
-    # def option2perfect(self2, keylst, extension, flpath, Q):
-    #     replace_rtn = MethodFiles.option2(self2, keylst, extension, flpath, Q)
-    #     return replace_rtn
-    #
-    # def option4(self2, keylst, extension):
-    #     exec(f'self2.option4{keylst[0]}(keylst, extension)')
-    #
-    # def option4perfect(self2, keylst, extension):
-    #     MethodFiles.option4(self2, keylst, extension)
-    #
-    # def option4defect(self2, k, e):
-    #     CaS_Settings.nn_and_def_except_found, fnd = True if CaS_Settings().nn_and_def_except_found == None else \
-    #         CaS_Settings().nn_and_def_except_found, False if e != '.inp' else None
-    #     dp = '/'.join([d for d in str(Dirs().address_book[k[0]][k[1]][k[2]][k[3]]["path"]).split('/') if d not in
-    #                    str(UArg().cwd).split('/')])
-    #     k.append(dp)
-    #     _, CaS_Settings.e2n_a_d = proxyfunction(k, None, None, None, CaS_Settings().e2n_a_d)
-    #     for n,r,c in ([n,r,c] for n,r,c in Dirs().dir_calc_keys[k[0]] if n==k[1] and r==k[2] and c!=k[3] and e!='.inp'):
-    #         if self2.flexts_[1][1] in Dirs().address_book['defect'][n][r][c].keys() and fnd is False:
-    #             if e == str(Dirs().address_book['defect'][n][r][c][self2.flexts_[1][1]]).split('/')[-1]:
-    #                 path, fnd = Dirs().address_book['defect'][n][r][c][self2.flexts_[1][1]].get(), True
-    #                 CaS_Settings().e2n_a_d['defect'].remove([k[1], k[2], k[3], k[-1]])
-    #                 Dirs.address_book, _= create_nested_dict(k, [str(path+'*')],[Dirs().address_book['defect'][n][r][c]
-    #                                                                              [path]], Dirs().address_book)
-    #     if fnd is not True:
-    #         k.remove(dp)
-    #         k.append(e)
-    #         _, CaS_Settings.i_nad = proxyfunction(k, None, None, None, CaS_Settings().i_nad)
-
+async def OnlyProcessing():
+    if 'geometry' in ProcessCntrls().processwants:
+        print("geometry should have worked this out already [code L952]")
+    else:
+        await Files4DefiningDefect.setoffassessment("charges and spins", "only")
 

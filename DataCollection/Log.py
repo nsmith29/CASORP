@@ -2,10 +2,7 @@
 
 import asyncio
 import numpy as np
-import sys
-import time
 
-from Core.DictsAndLists import log_var_fo, log_want
 from Core.CentralDefinitions import Dirs, SharableDicts
 
 

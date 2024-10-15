@@ -117,12 +117,9 @@ class Redistribute:
     def __init__(self, t):
         for key in SharableDicts().smd.keys():
             exec(f'{key} = SharableDicts().smd[key]')
-            print(f'{key}', SharableDicts().smd[key])
         self.populate_processresults('perfect')
         self.populate_processresults('defect')
-
         SharableDicts().smd.shm.close()
-        print('time taken from entering rooting to finish redistribute is', time.time()-t)
     @GetDirs
     def populate_processresults(self, type, n, r, c):
         ProcessCntrls.processresults, _ = create_nested_dict([type, n, r, c], ProcessCntrls().processwants,

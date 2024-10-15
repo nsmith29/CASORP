@@ -7,7 +7,7 @@ import time
 from Core.CentralDefinitions import Redistribute
 from Core.DictsAndLists import optdict
 from DataProcessing.ChargesSpins import CntrlChrgSpns
-from DataProcessing.Geometry import CntrolGeometry
+from DataProcessing.Geometry import CntrlGeometry
 
 
 __all__ = { 'ProcessNoDaemonProcess', 'PoolNoDaemonProcess', 'Rooting'}
@@ -83,8 +83,8 @@ class Rooting:
                             method assigned to the child worker process out of the
                             result processing methods chosen by user.
     """
-def __init__(self, want):
-    t = time.time()
-    Redistribute(t)
-    run = asyncio.run(eval(str("{}()".format(optdict.get(want)))))
+    def __init__(self, want):
+        t = time.time()
+        Redistribute(t)
+        run = asyncio.run(eval(str("{}()".format(optdict.get(want)))))
 
