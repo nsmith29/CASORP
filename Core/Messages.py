@@ -150,11 +150,9 @@ class linewidth:
             trial(str) : String to be printed.
 
     """
-
     def __init__(self, message):
         # Split string into list at "{" instances.
         message, j = message.split("{"), 0
-
         for item in message:
             if "}" in item:
                 # get index of item in list and split list items in two at the "}" instance.
@@ -163,7 +161,6 @@ class linewidth:
                 message.remove(item)
                 # 1st half of item placed back at original index of item, 2nd half inserted at index + 1.
                 [message.insert(indx + idx, n) for idx, n in zip(range(len(new)), new)]
-
         for indx, item in enumerate(message):
             # Don't want to count characters of bcolors calls.
             if "bcolors" not in item and len(item) != 0:
@@ -186,29 +183,24 @@ class linewidth:
                     except IndexError:
                         # insert newline at beginning of string.
                         o.insert(0, "\n")
-
                     # put broken characters of item back together and replace item in main list
                     message.remove(item)
                     message.insert(indx, "".join(o))
                     # return j value to account for removing 110 characters now on previous line, add characters now on current line.
                     j = j + k - 110
-
                 if j == 110:
                     # reset j back to 0 if at 110.
                     j = j - 110
-
             # inactive bcolors (txt color) calls. Characters in these not to be counted as str characters.
             if "bcolors" in item:
                 # remove inactive bcolors calls
                 message.remove(item)
                 # replace with active bcolors calls.
                 message.insert(indx, str("{}".format(eval("{}".format(item)))))
-
         # add final reset of color & newline
         message.extend([str("{}".format(eval("{}".format('bcolors.ENDC')))), "\n"])
         message = "".join(message)
         self.message = str(message)
-
     def Return(self):
         return self.message
 
@@ -225,7 +217,6 @@ class SlowMessageLines(linewidth):
                             commands within the current with statement it has acquired and
                             is released.
     """
-
     def __init__(self, message, lock = None):
         super().__init__(message)
         lines = self.message.splitlines()
@@ -235,17 +226,14 @@ class SlowMessageLines(linewidth):
                 self.Print(lines)
         else:
             self.Print(lines)
-
     def Print(self,lines):
         for line in lines:
             time.sleep(0.75)
             print(f"{line}[C.M L249]")
 
 class Global_lock:
-
     def __init__(self):
         self._lock = th.Lock()
-
     @property
     def lock(self):
         return self._lock
@@ -261,10 +249,8 @@ class ErrMessages:
             argv_dict(dict) : Dictionary of partial error message strings related to
                               each commandline argument.
     """
-
     def __init__(self, f):
         self._f= f
-
     @staticmethod #√
     def MAIN_IndexError():
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}Wrong number of arguments!{bcolors.ENDC}"
@@ -274,14 +260,12 @@ class ErrMessages:
                    "\n./MAIN.py perf_mat_subdir_str defect_parent_dir_str chem_pot_dir_str except str_of_defect_subdir")
         # pass text to function to print certain number of characters on each line.
         return linewidth(text).Return()
-
     @staticmethod #√
     def MAIN_KeyError(keywrd):
         """
             Inputs:
                 keywrd(str) : user given commandline argument four
         """
-
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}Invalid keyword {bcolors.BOLD}{bcolors.CHOSEN}'"
                    +f"{keywrd}"
                    +"'{bcolors.ENDC}{bcolors.FAIL}{bcolors.UNDERLINE} given!{bcolors.ENDC}{bcolors.KEYINFO} "
@@ -289,7 +273,6 @@ class ErrMessages:
                     "/ '{bcolors.OPTIONS}except{bcolors.KEYINFO}' / '{bcolors.OPTIONS}only{bcolors.KEYINFO}'.")
         # pass text to function to print certain number of characters on each line.
         return linewidth(text).Return()
-
     @staticmethod #√
     def MAIN_DirNotFndError(dirpath, i):
         """
@@ -299,7 +282,6 @@ class ErrMessages:
 
                 i(int)          : Number of the argument which triggered the error code.
         """
-
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}[Errno 2] No such file or directory{bcolors.ENDC} "
                    "{bcolors.KEYVAR}"
                    +f"{dirpath}"
@@ -312,7 +294,6 @@ class ErrMessages:
                     "spaces/dashes if present in name before rerunning.")
         # pass text to function to print certain number of characters on each line.
         return linewidth(text).Return()
-
     @staticmethod #√
     def ValueErrorlist(lock = None):
         """
@@ -326,7 +307,6 @@ class ErrMessages:
                                 printing commands within the current with statement it has
                                 acquired and is released.
         """
-
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}Invalid results type given!{bcolors.ENDC}"
                    "{bcolors.KEYINFO} "
                    "\nValid methods implemented are:{bcolors.OPTIONS}{bcolors.ITALIC} \n"
@@ -335,7 +315,6 @@ class ErrMessages:
                     "\nPlease use commas to separate the names of each method within your answer.")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         SlowMessageLines(text)
-
     @staticmethod #√
     def ValueErrorYorN(lock = None):
         """
@@ -346,13 +325,11 @@ class ErrMessages:
                                 printing commands within the current with statement it has
                                 acquired and is released.
         """
-
         text = str("\n{bcolors.FAIL}WARNING:{bcolors.UNDERLINE}Invalid answer given!{bcolors.ENDC}{bcolors.KEYINFO} "
                    "\nOnly valid answers are {bcolors.OPTIONS}Y {bcolors.ACTION}and {bcolors.OPTIONS}N"
                    "{bcolors.KEYINFO}.{bcolors.ACTION}Try again.  ")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         SlowMessageLines(text)
-
     @staticmethod
     def Main_NotImplementedError(lock):
         """
@@ -363,7 +340,6 @@ class ErrMessages:
                                 commands within the current with statement it has
                                 acquired and is released.
         """
-
         text = str("\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}Results asked to be processed include {bcolors.CHOSEN} "
                    "'WFN'{bcolors.FAIL}.{bcolors.ENDC}{bcolors.KEYINFO} \nWFN results can not be displayed in a csv file. "
                    "\n{bcolors.ACTION}If you do not wish for analysis to be performed on the other results asked for "
@@ -371,7 +347,6 @@ class ErrMessages:
                    "press {bcolors.OPTIONS}Y{bcolors.ACTION}.")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         SlowMessageLines(text)
-
     @staticmethod
     def Main_TypeError(err, lock):
         """
@@ -382,38 +357,33 @@ class ErrMessages:
                                   blocks the ability of any other thread to print until the lock has finished the
                                   printing commands within the current with statement it has acquired and is released.
         """
-
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}"+f"{err}"+"{bcolors.ENDC}")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         SlowMessageLines(text)
-
     @staticmethod
-    def FileSearch_LookupError(extension, subdirectory, method = None):
+    def FileSearch_LookupError(extension, subdirectory, method=None):
         dirpath = '/'.join([directory for directory in str(subdirectory).split('/') if directory not in
                             str(UArg.cwd).split('/')])
         text = str("\n{bcolors.FAIL}Error: {bcolors.UNDERLINE}Multiple files of the same file extension "
                    "{bcolors.ENDC}{bcolors.KEYVAR}'"
-                   +f"{extension}"
-                   +"'{bcolors.FAIL}{bcolors.UNDERLINE}have been unexpectedly found within directory "
-                    "{bcolors.ENDC}{bcolors.KEYVAR}"
-                   +f"{dirpath}"
-                   +"{bcolors.FAIL}.{bcolors.KEYINFO}\nThis code is not designed to handle multiple files with this "
-                    "particular extension being located in the same file directory.{bcolors.ACTION}\nPlease separate "
-                    "files based on each individual calculation they belong to, or if some of files with this extension"
-                    " are older/disregardable versions of the file extension for the same calculation, please rename "
-                    "their file extensions to {bcolors.ITALIC}{bcolors.KEYVAR}"
-                   +f"{extension}"
-                   +".old{bcolors.ACTION}.")
-
+                   + f"{extension}"
+                   + "'{bcolors.FAIL}{bcolors.UNDERLINE}have been unexpectedly found within directory "
+                     "{bcolors.ENDC}{bcolors.KEYVAR}"
+                   + f"{dirpath}"
+                   + "{bcolors.FAIL}.{bcolors.KEYINFO}\nThis code is not designed to handle multiple files with this "
+                     "particular extension being located in the same file directory.{bcolors.ACTION}\nPlease separate "
+                     "files based on each individual calculation they belong to, or if some of files with this extension"
+                     " are older/disregardable versions of the file extension for the same calculation, please rename "
+                     "their file extensions to {bcolors.ITALIC}{bcolors.KEYVAR}"
+                   + f"{extension}"
+                   + ".old{bcolors.ACTION}.")
         if method:
             method = str(method).upper()
             text = str(text
-                       +"\n                                      {bcolors.METHOD}{bcolors.UNDERLINE}ENDING "
-                       +f"{method}"
-                       +"PROCESSING{bcolors.ENDC}{bcolors.METHOD}...")
-
+                       + "\n                                      {bcolors.METHOD}{bcolors.UNDERLINE}ENDING "
+                       + f"{method}"
+                       + "PROCESSING{bcolors.ENDC}{bcolors.METHOD}...")
         return linewidth(text).Return()
-
     @staticmethod
     def FileSearch_FileNotFoundError1(key, lock = None):
         """
@@ -425,30 +395,23 @@ class ErrMessages:
                                 blocks the ability of any other thread to print until the lock has finished the printing
                                 commands within the current with statement it has acquired and is released.
         """
-
-
-        # Don't want to display full file path from / - only directories beyond the set sudo current working directory
         path, cwd = str(UArg.defd).split('/'), str(UArg.cwd).split('/')
         dirpath = '/'.join([directory for directory in path if directory not in cwd])
-
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}[Errno 2] No subdirectory {bcolors.BOLD}{bcolors.KEYVAR}"
-                   "'"+f"{key}"
-                   +"'{bcolors.ENDC}{bcolors.FAIL}{bcolors.UNDERLINE} found in parent directory:{bcolors.ENDC} "
-                    "{bcolors.KEYVAR}'"
-                   +f"{dirpath}"
-                   +"'{bcolors.FAIL}.{bcolors.INFO}\n"
-                   +"Use of key word '{bcolors.CHOSEN}{bcolors.ITALIC}{bcolors.BOLD}only{bcolors.ENDC}"
-                    "{bcolors.INFO}' requires all arguments given after '{bcolors.CHOSEN}{bcolors.ITALIC}"
-                    "{bcolors.BOLD}only{bcolors.ENDC}{bcolors.INFO}' to be names of subdirectories within the "
-                    "{bcolors.KEYVAR}{bcolors.ITALIC}"
-                   +f"{str(UArg.defd).split('/')[-1]}"
-                   +"{bcolors.ENDC}{bcolors.INFO} parent directory. {bcolors.ENDC}{bcolors.ACTION} \nSpaces or dashes "
-                    "within a directories name are not permitted. Rename directory to remove spaces/dashes if present "
-                    "in name(s) before rerunning.")
-        # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
+                   "'" + f"{key}"
+                   + "'{bcolors.ENDC}{bcolors.FAIL}{bcolors.UNDERLINE} found in parent directory:{bcolors.ENDC} "
+                     "{bcolors.KEYVAR}'"
+                   + f"{dirpath}"
+                   + "'{bcolors.FAIL}.{bcolors.INFO}\n"
+                   + "Use of key word '{bcolors.CHOSEN}{bcolors.ITALIC}{bcolors.BOLD}only{bcolors.ENDC}"
+                     "{bcolors.INFO}' requires all arguments given after '{bcolors.CHOSEN}{bcolors.ITALIC}"
+                     "{bcolors.BOLD}only{bcolors.ENDC}{bcolors.INFO}' to be names of subdirectories within the "
+                     "{bcolors.KEYVAR}{bcolors.ITALIC}"
+                   + f"{str(UArg.defd).split('/')[-1]}"
+                   + "{bcolors.ENDC}{bcolors.INFO} parent directory. {bcolors.ENDC}{bcolors.ACTION} \nSpaces or dashes "
+                     "within a directories name are not permitted. Rename directory to remove spaces/dashes if present "
+                     "in name(s) before rerunning.")
         SlowMessageLines(text, lock)
-
-
     @staticmethod
     def FileSearch_FileNotFoundError2(key, lock = None):
         """
@@ -460,31 +423,27 @@ class ErrMessages:
                                 blocks the ability of any other thread to print until the lock has finished the printing
                                 commands within the current with statement it has acquired and is released.
         """
-
-        # Don't want to display full file path from / - only directories beyond the set sudo current working directory
         path, cwd = str(UArg.defd).split('/'), str(UArg.cwd).split('/')
         dirpath = '/'.join([directory for directory in path if directory not in cwd])
-
-        text = str("\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2] No subdirectory {bcolors.BOLD}{bcolors.KEYVAR}"
-                   "'"+f"{key}"
-                   +"'{bcolors.ENDC}{bcolors.FAIL}{bcolors.UNDERLINE} found in parent directory:{bcolors.ENDC} "
-                    "{bcolors.KEYVAR}'"
-                   +f"{dirpath}"
-                   +"'{bcolors.FAIL}.{bcolors.KEYINFO}\n"
-                   +"Use of key word '{bcolors.CHOSEN}{bcolors.ITALIC}{bcolors.BOLD}only{bcolors.ENDC}{bcolors.KEYINFO}"
-                    "' requires all arguments given after '{bcolors.CHOSEN}{bcolors.ITALIC}{bcolors.BOLD}only"
-                    "{bcolors.ENDC}{bcolors.KEYINFO}' to be names of subdirectories within the {bcolors.KEYVAR}"
-                    "{bcolors.ITALIC}"
-                   +f"{str(UArg.defd).split('/')[-1]}"
-                   +"{bcolors.ENDC}{bcolors.KEYINFO} parent directory. {bcolors.ENDC}{bcolors.ACTION}\n"
-                   +"Spaces or dashes within a directories name are not permitted. Rename directory to remove "
-                    "spaces/dashes if present in name before rerunning with corrected name for {bcolors.BOLD}"
-                    "{bcolors.KEYVAR}'"
-                   +f"{key}"
-                   +"'{bcolors.ENDC}{bcolors.ACTION} subdirectory.")
-        # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
+        text = str(
+            "\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2] No subdirectory {bcolors.BOLD}{bcolors.KEYVAR}"
+            "'" + f"{key}"
+            + "'{bcolors.ENDC}{bcolors.FAIL}{bcolors.UNDERLINE} found in parent directory:{bcolors.ENDC} "
+              "{bcolors.KEYVAR}'"
+            + f"{dirpath}"
+            + "'{bcolors.FAIL}.{bcolors.KEYINFO}\n"
+            + "Use of key word '{bcolors.CHOSEN}{bcolors.ITALIC}{bcolors.BOLD}only{bcolors.ENDC}{bcolors.KEYINFO}"
+              "' requires all arguments given after '{bcolors.CHOSEN}{bcolors.ITALIC}{bcolors.BOLD}only"
+              "{bcolors.ENDC}{bcolors.KEYINFO}' to be names of subdirectories within the {bcolors.KEYVAR}"
+              "{bcolors.ITALIC}"
+            + f"{str(UArg.defd).split('/')[-1]}"
+            + "{bcolors.ENDC}{bcolors.KEYINFO} parent directory. {bcolors.ENDC}{bcolors.ACTION}\n"
+            + "Spaces or dashes within a directories name are not permitted. Rename directory to remove "
+              "spaces/dashes if present in name before rerunning with corrected name for {bcolors.BOLD}"
+              "{bcolors.KEYVAR}'"
+            + f"{key}"
+            + "'{bcolors.ENDC}{bcolors.ACTION} subdirectory.")
         SlowMessageLines(text, lock)
-
     @staticmethod
     def FileSearch_FileNotFoundError3(keywrd, name, run, charge, filetypes, lock = None):
         """
@@ -505,33 +464,28 @@ class ErrMessages:
                                 blocks the ability of any other thread to print until the lock has finished the printing
                                 commands within the current with statement it has acquired and is released.
         """
-
         print("\n")
-        if type(filetypes) != list :
+        if type(filetypes) != list:
             filetypes = [filetypes]
-        # want message to be displayed for each of the files within the filetypes list.
         for fltyp in filetypes:
             text = str("{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2]{bcolors.ENDC}{bcolors.FAIL} CP2K output "
                        "file type {bcolors.BOLD}{bcolors.KEYVAR}'"
-                       +f"{fltyp}"
-                       +"'{bcolors.ENDC}{bcolors.FAIL} needed for the {bcolors.METHOD}"
-                       +f"{keywrd}"
-                       +" processing{bcolors.ENDC}{bcolors.FAIL} method could not be found in the {bcolors.KEYVAR}"
-                       +f"{run}"
-                       +"{bcolors.ENDC}{bcolors.FAIL} directory for the {bcolors.KEYVAR}"
-                       +f"{charge}"
-                       +"{bcolors.ENDC}{bcolors.FAIL} charge state of {bcolors.KEYVAR}"
-                       +f"{name}"
-                       +"{bcolors.ENDC}{bcolors.FAIL}.")
+                       + f"{fltyp}"
+                       + "'{bcolors.ENDC}{bcolors.FAIL} needed for the {bcolors.METHOD}"
+                       + f"{keywrd}"
+                       + " processing{bcolors.ENDC}{bcolors.FAIL} method could not be found in the {bcolors.KEYVAR}"
+                       + f"{run}"
+                       + "{bcolors.ENDC}{bcolors.FAIL} directory for the {bcolors.KEYVAR}"
+                       + f"{charge}"
+                       + "{bcolors.ENDC}{bcolors.FAIL} charge state of {bcolors.KEYVAR}"
+                       + f"{name}"
+                       + "{bcolors.ENDC}{bcolors.FAIL}.")
             SlowMessageLines(text, lock)
-
         text = str("{bcolors.ACTION}Processing for the {bcolors.METHOD}"
-                   +f"{keywrd}"
-                   +"{bcolors.ENDC}{bcolors.ACTION} method will continue for found subdirectories which contain all "
-                    "required filetypes for the method.")
-        # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
+                   + f"{keywrd}"
+                   + "{bcolors.ENDC}{bcolors.ACTION} method will continue for found subdirectories which contain all "
+                     "required filetypes for the method.")
         SlowMessageLines(text, lock)
-
     @staticmethod
     def CaS_ConnectionAbortedError(path, lock=None):
         """
@@ -542,24 +496,19 @@ class ErrMessages:
                                 blocks the ability of any other thread to print until the lock has finished the printing
                                 commands within the current with statement it has acquired and is released.
         """
-
-        # Don't want to display full file path from / - only directories beyond the set sudo current working directory
         path, cwd = str(path).split('/'), str(UArg.cwd).split('/')
         dirpath = '/'.join([directory for directory in path if directory not in cwd])
-
         text = str("\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2]{bcolors.ENDC}{bcolors.FAIL} Needed "
                    "{bcolors.KEYVAR}'-ELECTRON_DENSITY-1_0.cube'{bcolors.ENDC}{bcolors.FAIL} file for {bcolors.METHOD}"
                    "analysis of Bader charges of atoms{bcolors.ENDC}{bcolors.FAIL} could not be found within the "
                    "given directory for perfect, defect-free material CP2K output files:{bcolors.KEYVAR} "
-                   +f"{dirpath}"
-                   +"{bcolors.KEYINFO} \nSubsequently, {bcolors.METHOD}Bader charge analysis{bcolors.ACTION}"
-                    " cannot be completed at all for results. {bcolors.METHOD}Mulliken and Hirshfeld analysis"
-                    "{bcolors.KEYINFO} will, however, still be performed for all results found.")
-        # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
+                   + f"{dirpath}"
+                   + "{bcolors.KEYINFO} \nSubsequently, {bcolors.METHOD}Bader charge analysis{bcolors.ACTION}"
+                     " cannot be completed at all for results. {bcolors.METHOD}Mulliken and Hirshfeld analysis"
+                     "{bcolors.KEYINFO} will, however, still be performed for all results found.")
         SlowMessageLines(text, lock)
-
     @staticmethod
-    def CaS_FileNotFoundError(MissingBader, filetypes, method, lock = Global_lock().lock):
+    def CaS_FileNotFoundError(MissingFiles, filetypes, method, lock=None):
         """
             Inputs:
                 DirsMissingBader(list) : List of file paths of the directory in which file was being searched for.
@@ -569,25 +518,18 @@ class ErrMessages:
                                          finished the printing commands within the current with statement it has
                                          acquired and is released.
         """
-
         text = str("\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2]{bcolors.ENDC}{bcolors.FAIL} Needed "
                    "{bcolors.KEYVAR}'"
-                   +f"{filetypes}"
-                   +"'{bcolors.ENDC}{bcolors.FAIL} file(s) for {bcolors.METHOD}"
-                   +"analysis of Bader charges of atoms"
-                   +"{bcolors.ENDC}{bcolors.FAIL} could not be found within the "
-                   "following directories for:")
-        # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
+                   + f"{filetypes}"
+                   + "'{bcolors.ENDC}{bcolors.FAIL} file(s) for {bcolors.METHOD}"
+                   + f"{method}"
+                   + "{bcolors.ENDC}{bcolors.FAIL} could not be found within the "
+                     "following directories for:")
         SlowMessageLines(text, lock)
-
-        time.sleep(1)
-
-        # want to print each of the strs held in list DirsMissingBader each on a separate line, one by one.
-        for dir in MissingBader:
-            text = str("{bcolors.KEYVAR}- "+f"{dir[-1]} "+"{bcolors.ENDC}")
-            # pass text & lock to function to print slowly when lock is next unreleased & available.
+        time.sleep(0.5)
+        for dir in MissingFiles:
+            text = str("{bcolors.KEYVAR}- " + f"{dir[-1]} " + "{bcolors.ENDC}")
             SlowMessageLines(text, lock)
-
     @staticmethod
     def Geometry_FileExistsError():
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE} Too many ")
@@ -595,11 +537,9 @@ class ErrMessages:
 class Stdin_Applied:
     def __init__(self):
         self._applied = False
-
     @property
     def applied(self):
         return self._applied
-
     @applied.setter
     def applied(self, bool):
         self._applied = bool
@@ -608,7 +548,6 @@ def checkinput(func):
     """
          Testing for error in user's input response to questions asked.
     """
-
     def wrapper(Q, typ, ans, *args) -> str:
         """
             Inputs:
@@ -627,12 +566,9 @@ def checkinput(func):
                                 asked again by function. If error exception is not triggered, return value
                                 of input A as given to function.
         """
-
         if Stdin_Applied().applied is False:
             sys.stdin = open(0)
             Stdin_Applied.applied = True
-
-
         while True:
             A = func(Q, typ, ans)
             try:
@@ -647,9 +583,7 @@ def checkinput(func):
                 eval("ErrMessages.ValueError{}()".format(typ))
                 A = func(Q, typ, ans)
             break
-
         return A
-
     return wrapper
 
 @checkinput
@@ -657,14 +591,10 @@ def ask_question(Q: str, typ: str, ans: list) -> str:
     """
         Asking required user input question.
     """
-
     _format = {'list': "A.split(', ') if ',' in A else [A]", 'YorN': 'A.upper()'}
-
-
     assert Q in questions.keys(), "Q must be a key for one of the questions within Core.PrePopDictsAndLists.questions."
     assert typ in _format.keys(), "typ is the expected type of the answer and must match a key within _format."
     assert isinstance(ans, list), "ans must be a list of multiple valid answer options the user can choose from"
-
     SlowMessageLines(questions[str(Q)])
     A = input()
     # if expected type is list, split string. If expected type is Yes or No, make sure string is upper case.
