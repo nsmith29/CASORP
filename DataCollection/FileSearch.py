@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 # import json
+import asyncio
+from asgiref.sync import sync_to_async
 import multiprocessing as mp
 import numpy as np
 import os
@@ -14,12 +16,12 @@ from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, Process
 from Core.DictsAndLists import  files4res, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
 from Core.Messages import ProcessTakingPlace, ErrMessages, Global_lock
-from DataCollection.FromFile import ResultsRetrieve
-from DataCollection.Inp import xyz1st
-from DataCollection.Log import  a, at_crd, charge, energy, gap, knd_atms, name, pop1, pop2, run, version
+from DataCollection.FromFile import iterate
+# from DataCollection.Inp import xyz1st
 
 
-__all__ = {'Finding', 'verify_only', 'DirsAndLogs', 'Cataloging', 'Entry4Files', 'MakingIntermediaryFiles'}
+
+__all__ = {'Finding', 'verify_only', 'DirsAndLogs', 'Cataloging', 'Entry4FromFiles', 'MakingIntermediaryFiles'}
 
 
 
@@ -27,16 +29,13 @@ class Finding:
     """
         Finding specific files needed for particular result processing methods inside directories of CP2K output files.
     """
-
     def __init__(self, path, extension):
         self.split_path, self.extension, self.layer, self.walk = path.split('/'), extension, 0, os.walk(path)
         self.dirpaths, self.filepaths, self.fnd = [], [], None
-
     def set_vars(self, bool_, cond_ = None):
         if bool_ == True:
             met, layer_met, meet_list, to_meet, indx, num_met, fnd_list = True, 0, None, None, None, None, None
             start, not_ = "", []
-
         elif bool_ == False:
             met, layer_met, num_met = False, 0, 0
             _, meet_list =((''.join(cond_.split(")"))).split("(")[0]), eval(((''.join(cond_.split(")"))).split("(")[2]))
@@ -44,9 +43,7 @@ class Finding:
             to_meet, indx = int(len(meet_list)) if 'not' not in _ else None, None
             num_met, fnd_list = 0 if to_meet > 1 else None, np.empty(to_meet, dtype = bool)  if 'not' not in _ and \
                                                                                                 to_meet > 1 else None
-
         return met, layer_met,  not_, num_met, fnd_list, meet_list, to_meet, indx
-
     def check_num_of_filepaths(self):
         noted_dirpath = ''
         for dir_ in self.dirpaths:
@@ -55,24 +52,20 @@ class Finding:
             else:
                 assert self.extension in multiplefiles4extension, \
                     f"{ErrMessages.FileSearch_LookupError(self.extension,noted_dirpath)}"
-
     def dir_tree_transversing(self, cond="", q_=None):
         """
             Searching for file within the os.walk() directory tree of subdirectory path.
         """
-
         met, layer_met, not_, num_met, fnd_list, meet_list, to_meet, indx, = self.set_vars(True) if cond == "" else \
             self.set_vars(False, cond)
         if TESTING.in_progress is True:
             print('met =', met, 'extension =', self.extension, '[DC.FS L67]')
-
         layer = {0: {"found": self.split_path[-1], "transversed": [] }}
         for (path_, dirs_, files_) in self.walk:
             if TESTING.in_progress is True:
                 print('met = ', met, "find =", self.fnd, "layer =", self.layer, "[DC.FS L72]")
             if [i for i in path_.split('/') if i in not_]:
                 continue
-
             if self.fnd is True and met is False or self.fnd is False and met is False:  # stops finding directories if fnd is true and met is false
                 if type(to_meet) == int and type(num_met) == int:
                     if num_met != to_meet:
@@ -85,36 +78,29 @@ class Finding:
                     if TESTING.in_progress is True:
                         print("should be breaking out of method loop [DC.FS L86]")
                     break
-
             self.layer = len(str(path_).split('/')) - len(self.split_path)
-
             keys_, met = [key for key in layer.keys() if
                           key > self.layer], False if self.layer != 0 and layer_met > self.layer - 1 else met # met reset to False if going back in layer num is less than layer num
-
             [layer.pop(key_) for key_ in keys_]
             layer[int(self.layer + 1)] = {"found": dirs_, "transversed": []} if int(
                 self.layer + 1) not in layer.keys() else layer[int(self.layer + 1)]
-
             if not dirs_ and not files_:
                 all_ = [layer[key]["transversed"] == layer[key]["found"] for key in layer.keys()]
                 if False not in all_:
                     self.fnd = False
                     met = False
                     break
-
             elif met is False:
                 if eval(cond):
                     met, layer_met = True, self.layer # set to true when first of directories listed in condition match current path
                     indx =[in_ for in_, i in enumerate(meet_list) if i.endswith(path_.split('/')[-1])][0] if to_meet \
                         else None
-
             elif met is True:
                 for file_ in files_:
                     if file_.endswith(str(self.extension)) and not path_.endswith(".ipynb_checkpoints"):
                         self.dirpaths.append(path_)
                         self.filepaths.append(os.path.join(path_, file_))
                         self.fnd = True # found all directories and logs for that particular named directory
-
             end = str(path_).split('/')[-1]
             [layer[self.layer]["transversed"].append(end_) for end_ in [end] if
              end_ in layer[self.layer]["found"] and end_ not in layer[self.layer]["transversed"]]
@@ -124,7 +110,6 @@ class Finding:
             self.fnd = False if self.fnd == None else self.fnd
         if len(self.filepaths) > 1:
             self.check_num_of_filepaths()
-
 
 class verify_only:
     """
@@ -162,7 +147,6 @@ class verify_only:
                 c_.notify()
         return dirs
 
-
 class DirsAndLogs(Finding):
     """
         Searching for individual subdirectories holding CP2K output files via finding .log files.
@@ -195,55 +179,139 @@ class DirsAndLogs(Finding):
         super().dir_tree_transversing(self.condition)
         return self.dirpaths
 
-
 class Cataloging(DirsAndLogs):
     """
         Recording down every subdirectories with CP2K data to be included in programme execution.
     """
 
     def __init__(self, path, type_, c_=None, q_=None, t=None):
-        # print(type_, 'c_=', c_, 'q_=', q_, '[DC.FS L207]')
+        # print(type_, 'c_=', c_, 'q_=', q_, '[DC.FS L206]')
         self.type_ = type_
         super().__init__(path, ".log", type_)
         super().dir_tree_transversing(self, c_=c_, q_=q_) if c_ != None else super().dir_tree_transversing(self)
-        self.pairing()
+        asyncio.run(self.pairing())
         # if t:
-            # print('defect cataloging finished in', time.time()-t, '[DC.FS L211]')
+            # print('defect cataloging finished in', time.time()-t, '[DC.FS L212]')
 
-    def pairing(self):
+    async def pairing(self):
         """
             Populating dictionaries with corresponding directory paths and file paths and data to specify each individual calculation.
         """
-        for indx, dir_, file_ in zip(range(len(self.dirpaths)), self.dirpaths, self.filepaths):
-            chrg_stt, name, rn_typ = Entry4Files(file_, "log", 'original').Return()
-            Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict([self.type_, name[0], rn_typ[0], chrg_stt[0]],
-                                                                       ["path", "log"], [dir_, file_],
+        async for item in async_pairing_iterator(self.filepaths, self.dirpaths):
+            outer_keys, inner_keys, inner_values = item
+            print(outer_keys)
+            outer_keys.insert(0, self.type_)
+            Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict(outer_keys, inner_keys, inner_values,
                                                                        Dirs().address_book, Dirs().dir_calc_keys,
-                                                                       ["Dirs.address_book", "Dirs.dir_calc_keys"])
+                                                                   ["Dirs.address_book", "Dirs.dir_calc_keys"])
+            # except:
+            #     print(item)
 
 
-class Entry4Files(ResultsRetrieve):
+        # Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict([self.type_, name[0], rn_typ[0], chrg_stt[0]],
+        #                                                            ["path", "log"], [dir_, file_],
+        #                                                            Dirs().address_book, Dirs().dir_calc_keys,
+        #                                                            ["Dirs.address_book", "Dirs.dir_calc_keys"])
+
+class async_pairing_iterator():
     """
-        Entry point for extracting data from files.
+        iterator through all filepaths and directories
     """
+    def __init__(self, filepaths, dirpaths):
+        self.filepaths = filepaths
+        self.dirpaths = dirpaths
+        self.counter = -1
+    def __aiter__(self):
+        return self
+    async def __anext__(self):
+        if self.counter >= len(self.filepaths)-1:
+            raise StopAsyncIteration
+        self.counter +=1
+        return await Entry4FromFiles(self.filepaths[self.counter], 'log', 'original'), ["path", "log"], [self.dirpaths[self.counter], self.filepaths[self.counter]]
 
-    def __init__(self, os_path, file, kywrd):
-        self.var = eval("{}_var_fo".format(file))
-        super().__init__(file, kywrd)
-        for indx, item in enumerate(self.want):
-            varitem = self.var.get(item)
-            exec(f'{item}.os_path = os_path')
-            exec(f'{item}.varitem = varitem')
-            self.process[indx] = mp.Process(target=eval("{}".format(item)),
-                                            args=(self.v2rtn, indx, os_path, varitem))
-        super().compute()
+class toFromFiles_iterator():
+    """
+        Iterator for cycling through the multiple variables required for extraction/collection for result processing method.
+    """
+    def __init__(self, want):
+        self.want = want
+        self.counter = -1
+    def __aiter__(self):
+        return self
+    async def __anext__(self):
+        if self.counter >= len(self.want) - 1:
+            raise StopAsyncIteration
+        self.counter += 1
+        return self.want[self.counter]
 
-    # execution of mp.processes in old FromLog.__init__
+async def Entry4FromFiles(path, file, keywrd):
+    """
+        Passing on data for variable extraction/collection from files
+    """
+    want, var = eval("{}_want[keywrd]".format(file)), eval("{}_var_fo".format(file))
+    v2rtn = [iterate(path, var.get(item)) async for item in toFromFiles_iterator(want)]
+    return await asyncio.gather(*v2rtn)
 
-    def Return(self):
-        return self.v2rtn
-    # old FromLog.Return and old FromInp.Return
+class GetDirs_iterator():
+    def __init__(self, cat):
+        self.cat = cat
+        self.counter = -1
+    def __aiter__(self):
+        return self
+    async def __anext__(self):
+        if self.counter >= len(self.cat)-1:
+            raise StopAsyncIteration
+        self.counter +=1
+        return self.cat[self.counter]
 
+class FileExt_iterator():
+    def __init__(self, flexts):
+        self.flexts = flexts
+        self.counter = -1
+    def __aiter__(self):
+        return self
+    async def __anext__(self, update=None):
+        if update:
+            self.flexts = update
+            return
+        if self.counter > len(self.flexts) - 1:
+            raise StopAsyncIteration
+        self.counter += 1
+        return self.counter
+
+def CatalogueFinding(func):
+    async def wrapper(self2, type_, fl_exts, section, **kwargs):
+        if "ignore" in kwargs.keys() and self2.keywrd in restrictions.keys() or self2.keywrd not in restrictions.keys():
+            cats = Dirs().dir_calc_keys.copy()
+        else:
+            cats = {type_: [entry for entry in Dirs().dir_calc_keys[type_] if eval(restrictions[self2.keywrd])]}
+        book, errflaggd, Q = Dirs().address_book.copy(), fl_exts, asyncio.Queue()
+        async for item_ in GetDirs_iterator(cats[type_]):
+            n, r, c, keylst = item_[0], item_[1], item_[2], [type_, item_[0], item_[1], item_[2]]
+            Ars = [value for key, value in kwargs.items() if key == 'exchange'] if kwargs else []
+            path, keys, flexts = book[type_][n][r][c]["path"], book[type_][n][r][c].keys(), []
+            [fl_exts.remove(flext_) for flext_ in fl_exts if flext_ in keys]
+            pair, flexts, len_ = [section for i in range(len(fl_exts))], fl_exts.copy(), len(fl_exts),
+            while True:
+                iterable = FileExt_iterator(flexts)
+                async for j in iterable:
+                    if TESTING.in_progress is True:
+                        print(j, flexts)
+                    find = Finding(path, flexts[j], True)
+                    fnd, filepaths = await sync_to_async(find.returning)()
+                    _ = [Ars.insert(0, path) if pair[j] == None else Ars]
+                    Ars_ = Ars if pair[j] == None else []
+                    rtn = await func(self2, keylst, pair[j], flexts[j], fnd, filepaths, Q, *eval("{}".format(Ars_)))
+                    while Q.empty() is False:
+                        items = await Q.get()
+                        pair.append(items[0])
+                        flexts.append(items[1][0])
+                        if j + 1 > len_ - 1:
+                            await iterable.__anext__(update=flexts)
+                    if rtn == 'continue':
+                        await iterable.__anext__()
+                break
+    return wrapper
 
 class Method: # to be inherited by only spins and msin method get.
     def __init__(self, keywrd, subwrd = None):
@@ -254,103 +322,46 @@ class Method: # to be inherited by only spins and msin method get.
         self.types, self.flexts_= [key for key, value in inner_dict.items()], [value for key, value in inner_dict.items()]
         self.sect = True if self.int in self.res.keys() else False
 
-
-class CatalogueFinding(Finding, object):  # Finding needs path and extension.
-
-    def __init__(self, func):
-        self.func = func
-        self.cats, self.book = None, None # Dirs().dir_calc_keys.copy(), Dirs().address_book.copy()
-        self.errflggd = []
-
-    def definiting(self, base_ext, type_, keywrd = None):
-        if keywrd in restrictions.keys():
-            self.cats = {type_ : [entry for entry in Dirs().dir_calc_keys[type_] if eval(restrictions[keywrd])]}
-            print(self.cats, '[DC.FS L266]')
-        else:
-            self.cats = Dirs().dir_calc_keys.copy()
-        self.book, self.errflggd= Dirs().address_book.copy(), base_ext
-
-    def __call__(self, self2, type_, fl_exts, section, **kwargs):
-        if self.cats == None:
-            print(kwargs, type_, fl_exts, '[DC.FS L272]')
-            self.definiting(fl_exts, type_) if "ignore" in kwargs.keys() else self.definiting(fl_exts, type_, self2.keywrd)
-
-        for n, r, c in self.cats[type_]:
-            Ars = [value for key, value in kwargs.items() if key == 'exchange'] if kwargs else []
-            keylst = [type_, n, r, c]
-            path, keys, flexts = self.book[type_][n][r][c]["path"], self.book[type_][n][r][c].keys(), []
-
-            [fl_exts.remove(flext_) for flext_ in fl_exts if flext_ in keys]
-            Q, pair, flexts, j = queue.Queue(), [section for i in range(len(fl_exts))], fl_exts.copy(), 0
-
-            while j < len(flexts):
-                super().__init__(path, flexts[j])
-                super().dir_tree_transversing()
-
-                _ = [Ars.insert(0, path) if pair[j] == None else Ars]
-                Ars_ = Ars if pair[j] == None else []
-                rtn = self.func(self2, keylst, pair[j], flexts[j], self.fnd, self.filepaths, Q, *eval("{}".format(Ars_)))
-
-                while Q.empty() is False:
-                    items = Q.get()
-                    pair.append(items[0])
-                    flexts.append(items[1][0])
-                    break
-                j += 1
-                if rtn == 'continue':
-                    j = len(fl_exts) + 1
-
-
 class MethodFiles(Method):
     """
         Finding specific files needed for particular result processing methods inside directories of CP2K output files.
     """
-
-    def __init__(self2, keywrd, subwrd = None):
+    def __init__(self2, keywrd, subwrd=None):
         super().__init__(keywrd, subwrd)
-        for type_, flexts  in zip(self2.types, self2.flexts_):
-            self2.type_, self2.flexts = type_, flexts
-            self2.assessment_tree(self2, self2.type_, self2.flexts, self2.sect)
-
     @CatalogueFinding
-    def assessment_tree(self2, keylst, sect, extension, fnd, flpath, Q, path = None, exchange = None):
-        # print('in assessment tree', keylst, 'filepath =', flpath, 'found =', fnd, '[DC.FS L314]', '\n\n')
+    async def assessment_tree(self2, keylst, sect, extension, fnd, flpath, Q, path=None, exchange=None):
         if exchange:
             self2.keywrd, self2.res = exchange, files4res[exchange]
         if sect is True and fnd is not True:
-            self2.option1(keylst, Q)
+            await self2.option1(keylst, Q)
             rtn = 'pass'
         elif sect is True and fnd is True or sect is False and fnd is True:
-            rtn = self2.option2(keylst, extension, flpath, Q)
+            rtn = await self2.option2(keylst, extension, flpath, Q)
         elif sect is None and fnd is True:
-            self2.option3(keylst, path, flpath)
+            await self2.option3(keylst, path, flpath)
             rtn = 'continue'
         elif sect is None and fnd is False or sect is False and fnd is False:
-            self2.option4(keylst, extension)
+            await self2.option4(keylst, extension)
             rtn = 'continue'
         return rtn
-
-    def option1(self2, keylst, Q):
-        Q.put([None, self2.res[self2.out][keylst[0]]])
-
-    def option2(self2, keylst, extension, flpath, Q):
+    async def option1(self2, keylst, Q):
+        await Q.put([None, self2.res[self2.out][keylst[0]]])
+    async def option2(self2, keylst, extension, flpath, Q):
         Dirs.address_book, _ = create_nested_dict(keylst, [extension], [flpath], Dirs().address_book)
+        await asyncio.sleep(0.01)
         rtn = 'continue'
         return rtn
-
-    def option3(self2, keylst, path, flpath):
-        Q_ = queue.Queue()
-        t0a = th.Thread(target=MakingIntermediaryFiles, args=(path, flpath, self2.keywrd, Q_))
-        t0a.start()
-        # t0b = th.Thread(target=ProcessTakingPlace, args=(Global_lock().lock, 0.05, True))
-        # t0b.start()
-        while Q_.empty() is False:
-            new_fls = Q_.get()
-            for ext, nwfl in zip(self2.res[self2.int][keylst[0]], new_fls):
-                Dirs.address_book, _ = create_nested_dict(keylst, [ext], [nwfl], Dirs().address_book)
-        t0a.join()
-
-    def option4(self2, keylst, extension):
+    async def option3(self2, keylst, path, flpath):
+        Q_ = asyncio.Queue()
+        await sync_to_async(MakingIntermediaryFiles(path, flpath, self2.keywrd, Q_))
+        while True:
+            while Q_.empty() is False:
+                new_fls = await Q_.get()
+                for ext, nwfl in zip(self2.res[self2.int][keylst[0]], new_fls):
+                    Dirs.address_book, _ = create_nested_dict(keylst, [ext], [nwfl], Dirs().address_book)
+            Q_.task_done()
+    async def option4(self2, keylst, extension):
+        await asyncio.sleep(0.01)
         try:
             raise FileNotFoundError
         except FileNotFoundError:
@@ -383,7 +394,6 @@ class MakingIntermediaryFiles:
         Outputs:
             flns4rtrn(str/list of os.path) : New file os.path()(s) for the newly created intermediary file(s).
     """
-
     def __init__(self, dirpath, filepaths, keywrd, q = None):
         self.dirpath, self.filepaths = dirpath, filepaths
         # get list of names of all items within directory of self.dirpath at entry to class.
@@ -396,7 +406,6 @@ class MakingIntermediaryFiles:
         self.flns4rtrn = [os.path.join(self.dirpath, file) for file in after if file not in before]
         if q:
             q.put(self.flns4rtrn)
-
     def BaderFileCreation(self):
         """
             Creation of "ACF.dat" (atom coords), "AVF.dat"(bader coords), "BCF.dat"(atomic vol) files for bader analysis.
@@ -404,11 +413,9 @@ class MakingIntermediaryFiles:
             self.filepaths should consist of one os.path() for file with file extension '-ELECTRON_DENSITY-1_0.cube.'
 
         """
-
         # filename at end of self.filepaths os.path(), cwd when entering function, & os.path() to bader executable.
         baderfile, cwd, BdrExec = self.filepaths.split("/")[-1], os.getcwd(), \
                                   os.path.join(Dirs().executables_address, "bader")
-
         # change sudo current working directory (cwd) to directory of calculation.
         os.chdir(self.dirpath)
         # acts as: !{bader executable} {filepath}; output created by BdrExec program is suppressed.
@@ -417,40 +424,34 @@ class MakingIntermediaryFiles:
                             stderr=subprocess.STDOUT)
         # change sudo current working directory back to originally set directory in MAIN.py.
         os.chdir(cwd)
-
     def GeometryLastCreation(self):
         """
             Creation of new xyz file which contains the coordinates of the final geometry optimization step of the calc.
 
             self.filepaths should consist of one os.path() for file with the file extension of '1.xyz'.
         """
-
         # derive new file name from previous 1.xyz name with the new extension of L.xyz.
         new_xyz_file = "".join([i for i in self.filepaths][:-5] + ["L.xyz"])
         old_xyz, new_xyz1 = open(self.filepaths, 'r'), open(new_xyz_file, 'w')
         # tot # of atoms will not change between 1st & last optimization step - 1st 1.xyz line gives # of atoms in calc.
         tot_atoms, lines, j, index = [str('     ' + "".join(old_xyz.readline().split())), old_xyz.readlines(),
                                       len(old_xyz.readlines()), len(old_xyz.readlines()) + 1]
-
         last_itr = False
         # for last geometry step, need to start at bottom of 1.xyz file.
         for line in reversed(lines):
             # moving up the lines from the bottom of 1.xyz file.
             index -= 1
-
             # last line in 1.xyz file which will be written as first line in new L.xyz file.
             if tot_atoms not in line and index == j and last_itr is False:
                 string = line
                 new_xyz1.write(string)
                 new_xyz1.close()
-
             # rest of the coordinates of the last geometry step and final line with total atoms.
             elif last_itr is False:
                 # 1st line of each geometry optimization step has only tot # of atoms - Last line to write.
                 if tot_atoms in line and last_itr is False:
                     # Last_itr needs to be set to True to stop the writing of further lines to L.xyz after final line.
                     last_itr = True
-
                 # opening L.xyz file in read+ mode so that file can be read and written to.
                 with open(new_xyz_file, 'r+') as new_xyz2:
                     # create list of all lines within the newly created L.xyz file.
@@ -460,6 +461,5 @@ class MakingIntermediaryFiles:
                     new_xyz2.seek(0)
                     # write amended list of L.xyz lines with next line from 1.xyz at the top from top of file down.
                     new_xyz2.writelines(lines2)
-
     def Return(self):
         return self.flns4rtrn
