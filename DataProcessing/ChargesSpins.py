@@ -26,7 +26,6 @@ async def CntrlChrgSpns():
     print(tasks)
 
 async def ThreadOne(e1):
-    print('in thread 1 [code L1402]')
     result = await  sync_to_async(ask_question)("CaSQ1", "YorN", ['Y', 'N'])
     CaS_Settings.nn_and_def = boolconvtr[result]
     e1.set()
@@ -50,7 +49,6 @@ async def ThreadOne(e1):
     # 2. if True, OnlyProcessing; if False, wait for answer to whether there is errors from BaderProcessing
 
 async def ThreadTwo(e1):
-    t = time.time()
     await BaderProcessing().setoffassessment()
     await e1.wait()
     if CaS_Settings().bader_missing is True:

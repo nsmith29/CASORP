@@ -109,7 +109,7 @@ async def find_pop1(atoms, index, lines):
                                   if var[0] in [3, 4, 5, 6]]
         collect2.append([p1_a, p1_b, p1_c, p1_s])
     await asyncio.sleep(0.01)
-    return [collect2]
+    return collect2
 
 async def find_pop2(atoms, index, lines, path):
     addbk, ckeys = Dirs().address_book, Dirs().dir_calc_keys
@@ -124,7 +124,7 @@ async def find_pop2(atoms, index, lines, path):
                                   var[0] in [4, 5, 6, 7]]
         collect3.append([p2_a, p2_b, p2_c, p2_s])
     await asyncio.sleep(0.01)
-    return [collect3]
+    return collect3
 
 async def find_version(line, **kwargs):
     # extract txt of index 5 in line split list. V is CP2K version calculation performed with.

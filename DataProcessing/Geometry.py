@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
+import json
 from Core.CentralDefinitions import Geo_Settings, End_Error, ProcessCntrls
 from Core.Messages import ErrMessages
 from DataProcessing.ProcessCntral import Files4DefiningDefect
 from DataCollection.FileSearch import  MethodFiles
-from Core.CentralDefinitions import Dirs
+from Core.CentralDefinitions import Dirs, sharable_vars
 
 __all__ = {'CntrlGeometry', 'GeometryProcessing', 'DefProcessing'}
 
@@ -39,6 +40,7 @@ class GeometryProcessing(MethodFiles):
 async def DefProcessing():
     if 'charges and spins' in ProcessCntrls().processwants:
         await Files4DefiningDefect.setoffassessment('geometry', 'defect defining', ignore=True)
+        print(json.dumps(Dirs().address_book, indent=1))
     else:
         await Files4DefiningDefect.setoffassessment('geometry', 'defect defining')
     print('done DefProcessing')

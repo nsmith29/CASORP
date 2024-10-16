@@ -229,7 +229,7 @@ class SlowMessageLines(linewidth):
     def Print(self,lines):
         for line in lines:
             time.sleep(0.75)
-            print(f"{line}[C.M L249]")
+            print(f"{line}")#[C.M L249]")
 
 class Global_lock:
     def __init__(self):

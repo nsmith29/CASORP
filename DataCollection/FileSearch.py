@@ -6,7 +6,7 @@ import numpy as np
 import os
 import subprocess
 
-from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg
+from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg, add2addressbook
 from Core.DictsAndLists import  files4res, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
 from Core.Messages import ErrMessages, Global_lock
@@ -321,7 +321,7 @@ class MethodFiles(Method):
     async def option1(self2, keylst, Q):
         await Q.put([None, self2.res[self2.out][keylst[0]]])
     async def option2(self2, keylst, extension, flpath, Q):
-        Dirs.address_book, _ = create_nested_dict(keylst, [extension], [flpath], Dirs().address_book)
+        Dirs.address_book = add2addressbook(keylst, [extension], [flpath], Dirs().address_book)
         await asyncio.sleep(0.01)
         rtn = 'continue'
         return rtn
@@ -332,7 +332,7 @@ class MethodFiles(Method):
             while Q_.empty() is False:
                 new_fls = await Q_.get()
                 for ext, nwfl in zip(self2.res[self2.int][keylst[0]], new_fls):
-                    Dirs.address_book, _ = create_nested_dict(keylst, [ext], [nwfl], Dirs().address_book)
+                    Dirs.address_book = add2addressbook(keylst, [ext], [nwfl], Dirs().address_book)
             Q_.task_done()
     async def option4(self2, keylst, extension):
         await asyncio.sleep(0.01)

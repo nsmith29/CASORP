@@ -34,6 +34,11 @@ def savekeys(func):
         return d1, d2
     return wrapper
 
+def add2addressbook(keys,subkeys, path, d):
+    for sub, val in zip(subkeys, path):
+        d[keys[0]][keys[1]][keys[2]][keys[3]][sub] = val
+    return d
+
 @savekeys
 def create_nested_dict(keys, subkeys, paths, d):
     """
@@ -99,19 +104,16 @@ class End_Error:
 
             sys.exit(1)
 
-
 class CreateSharableDicts:
     def __init__(self, name, dict):
         SharableDicts().smd[name] = dict
         SharableDicts().smd.shm.close()
-
 
 def GetDirs(func):
     def wrapper(self2, type_):
         for n, r, c in ([n, r, c] for n, r, c in Dirs().dir_calc_keys[type_]):
             func(self2, type_, n, r, c)
     return wrapper
-
 
 class Redistribute:
     def __init__(self, t):
@@ -124,7 +126,6 @@ class Redistribute:
     def populate_processresults(self, type, n, r, c):
         ProcessCntrls.processresults, _ = create_nested_dict([type, n, r, c], ProcessCntrls().processwants,
                                                              ProcessCntrls().setup, ProcessCntrls().processresults, None)
-
 
 class ResultsUpdate:
     def __init__(self, func):
