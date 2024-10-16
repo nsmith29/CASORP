@@ -36,6 +36,7 @@ def savekeys(func):
 
 def add2addressbook(keys,subkeys, path, d):
     for sub, val in zip(subkeys, path):
+        # if sub not in d[keys[0]][keys[1]][keys[2]][keys[3]].keys():
         d[keys[0]][keys[1]][keys[2]][keys[3]][sub] = val
     return d
 

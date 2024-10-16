@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from Core.CentralDefinitions import Geo_Settings, End_Error, ProcessCntrls
+from Core.CentralDefinitions import Geo_Settings, End_Error, ProcessCntrls, Ctl_Settings
 from Core.Messages import ErrMessages
 from DataProcessing.ProcessCntral import Files4DefiningDefect
 from DataCollection.FileSearch import  MethodFiles
@@ -30,8 +30,7 @@ class GeometryProcessing(MethodFiles):
         if kl[0] == 'perfect':
             Geo_Settings.perf_lxyz = flpath
         if len(flpath) > 1:
-            print(flpath)
-            [flpath.remove(entry) for entry in flpath if str(entry).split('/')[-1] == Geo_Settings().perf_lxyz]
+            [flpath.remove(entry) for entry in flpath if str(entry).split('/')[-1] == str(Geo_Settings().perf_lxyz).split('/')[-1]]
             End_Error(len(flpath) > 1, ErrMessages.FileSearch_LookupError(extension,
                                         Dirs().address_book[kl[0]][kl[1]][kl[2]][kl[3]]["path"],"geometry"))
         replace_rtn = await super().option2(kl, extension, flpath, Q)
@@ -40,7 +39,12 @@ class GeometryProcessing(MethodFiles):
 async def DefProcessing():
     if 'charges and spins' in ProcessCntrls().processwants:
         await Files4DefiningDefect.setoffassessment('geometry', 'defect defining', ignore=True)
-        print(json.dumps(Dirs().address_book, indent=1))
+        # print(json.dumps(Dirs().address_book, indent=1))
+        # save collected Ctl_settings properties to shared memory dictionary for transfer between processes
+        for name in ['defining_except_found', 'e2_defining', 'i_defining']:
+            name, var = str('Ctl_Settings' + name), eval('Ctl_Settings().{}'.format(name))
+            sharable_vars(name, var)
+        # save
     else:
         await Files4DefiningDefect.setoffassessment('geometry', 'defect defining')
     print('done DefProcessing')
