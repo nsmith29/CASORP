@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__all__ = {'argv_dict', 'defect_type', 'files4res', 'functions', 'inp_var_fo', 'inp_want', 'log_var_fo',
+__all__ = {'argv_dict', 'boolconvtr', 'defect_type', 'files4res', 'functions', 'inp_var_fo', 'inp_want', 'log_var_fo',
            'log_want', 'multiplefiles4extension', 'optdict', 'options',  'questions'}
 
 ## LISTS
@@ -24,6 +24,8 @@ argv_dict = {"1": "{bcolors.ITALIC}the name of the {bcolors.KEYINFO}{bcolors.BOL
                   "{bcolors.KEYINFO}{bcolors.BOLD}chemical potentials{bcolors.ENDC}{bcolors.ITALIC}{bcolors.INFO}"
                   " for host and impurity atoms "
              }
+
+boolconvtr = {'Y': True, 'N': False}
 
 defect_type = {'substitution': "finding_substitutional",
                'vacancy': "finding_vacancy",

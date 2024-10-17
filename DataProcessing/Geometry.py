@@ -13,7 +13,6 @@ __all__ = {'CntrlGeometry', 'GeometryProcessing', 'DefProcessing'}
 
 async def CntrlGeometry():
     coroutines = [GeometryProcessing.setoffassessment(), DefProcessing()]
-
     Tasks = await asyncio.gather(*coroutines)
 
 class GeometryProcessing(MethodFiles):
@@ -25,7 +24,6 @@ class GeometryProcessing(MethodFiles):
         for type_, flexts in zip(self2.types, self2.flexts_):
             self2.type_, self2.flexts = type_, flexts
             await super().assessment_tree(self2, self2.type_, self2.flexts, self2.sect)
-
     async def option2(self2, kl, extension, flpath, Q):
         if kl[0] == 'perfect':
             Geo_Settings.perf_lxyz = flpath
@@ -39,12 +37,9 @@ class GeometryProcessing(MethodFiles):
 async def DefProcessing():
     if 'charges and spins' in ProcessCntrls().processwants:
         await Files4DefiningDefect.setoffassessment('geometry', 'defect defining', ignore=True)
-        # print(json.dumps(Dirs().address_book, indent=1))
         # save collected Ctl_settings properties to shared memory dictionary for transfer between processes
         for name in ['defining_except_found', 'e2_defining', 'i_defining']:
             name, var = str('Ctl_Settings' + name), eval('Ctl_Settings().{}'.format(name))
             sharable_vars(name, var)
-        # save
     else:
         await Files4DefiningDefect.setoffassessment('geometry', 'defect defining')
-    print('done DefProcessing')

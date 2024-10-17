@@ -3,14 +3,15 @@
 # import json
 import asyncio
 import sys
-import time
 from shared_memory_dict import SharedMemoryDict
+from Core.DictsAndLists import boolconvtr
+from Core.Iterables import GetDirs_iterator
 
-__all__ = {'boolconvtr', 'CaS_Settings', 'create_nested_dict', 'Dirs', 'End', 'End_Error', 'Geo_Settings', 'GetDirs',
-           'proxyfunction', 'ProcessCntrls', 'Redistribute', 'SaveProperties', 'SharableDicts', 'sharable_vars',
-           'savekeys', 'UArg', 'Userwants'}
+__all__ = {'add2addressbook', 'CaS_Settings', 'create_nested_dict', 'CreateSharableDicts', 'Ctl_Settings', 'Dirs',
+           'End', 'End_Error', 'Geo_Settings', 'GetDirs', 'proxyfunction', 'ProcessCntrls', 'Redistribute',
+           'ResultsUpdate', 'SaveProperties', 'SharableDicts', 'sharable_vars', 'TESTING', 'savekeys', 'UArg',
+           'Userwants'}
 
-boolconvtr = {'Y': True, 'N': False}
 
 ## functions
 
@@ -87,6 +88,19 @@ def sharable_vars(var, value):
     exec(f'{var} = value')
     SharableDicts().smd.shm.close()
 
+def GetDirs(func):
+    def wrapper(self2, type_):
+        for n, r, c in ([n, r, c] for n, r, c in Dirs().dir_calc_keys[type_]):
+            func(self2, type_, n, r, c)
+    return wrapper
+
+def percalcdir(func):
+    async def wrapper(type_, indices=None):
+        async for item_ in GetDirs_iterator(Dirs().dir_calc_keys[type_]):
+            n, r, c = item_[0], item_[1], item_[2]
+            await func(type_, n, r, c, indices)
+    return wrapper
+
 # classes
 
 class End_Error:
@@ -109,12 +123,6 @@ class CreateSharableDicts:
     def __init__(self, name, dict):
         SharableDicts().smd[name] = dict
         SharableDicts().smd.shm.close()
-
-def GetDirs(func):
-    def wrapper(self2, type_):
-        for n, r, c in ([n, r, c] for n, r, c in Dirs().dir_calc_keys[type_]):
-            func(self2, type_, n, r, c)
-    return wrapper
 
 class Redistribute:
     def __init__(self, t):

@@ -1,23 +1,13 @@
 #!/usr/bin/env python3
 
 import asyncio
-from Core.CentralDefinitions import Dirs, create_nested_dict, UArg, Ctl_Settings, proxyfunction, add2addressbook
+from Core.CentralDefinitions import Dirs,  UArg, Ctl_Settings, proxyfunction, add2addressbook
+from Core.Iterables import keylist_iterator
 from DataCollection.FileSearch import MethodFiles, Entry4FromFiles
 
 
 __all__ = {'Files4DefiningDefect'}
 
-class keylist_iterator:
-    def __init__(self, dif_chrgs):
-        self.counter  = -1
-        self.dif_chrgs = dif_chrgs
-    def __aiter__(self):
-        return self
-    async def __anext__(self):
-        if self.counter >= len(self.dif_chrgs)-1:
-            raise StopAsyncIteration
-        self.counter +=1
-        return self.dif_chrgs[self.counter]
 
 class Files4DefiningDefect(MethodFiles):
     def __init__(self2, *args):

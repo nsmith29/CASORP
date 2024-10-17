@@ -13,9 +13,9 @@ import time
 import threading as th
 from shared_memory_dict import SharedMemoryDict
 
-from Core.CentralDefinitions import boolconvtr, Dirs, End, End_Error, ProcessCntrls, SharableDicts, sharable_vars, UArg,\
+from Core.CentralDefinitions import  Dirs, End, End_Error, ProcessCntrls, SharableDicts, sharable_vars, UArg,\
     Userwants
-from Core.DictsAndLists import options
+from Core.DictsAndLists import options, boolconvtr
 from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLines, Delay_Print
 from Core.NoDaemonicChildren_mp import PoolNoDaemonProcess, Rooting
 from DataCollection.FileSearch import Cataloging

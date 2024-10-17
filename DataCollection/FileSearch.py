@@ -9,6 +9,7 @@ import subprocess
 from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg, add2addressbook
 from Core.DictsAndLists import  files4res, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
+from Core.Iterables import async_pairing_iterator, toFromFiles_iterator, GetDirs_iterator, FileExt_iterator
 from Core.Messages import ErrMessages, Global_lock
 from DataCollection.FromFile import iterate
 
@@ -180,43 +181,12 @@ class Cataloging(DirsAndLogs):
         """
             Populating dictionaries with corresponding directory paths and file paths and data to specify each individual calculation.
         """
-        async for item in async_pairing_iterator(self.filepaths, self.dirpaths):
+        async for item in async_pairing_iterator(Entry4FromFiles, self.filepaths, self.dirpaths):
             outer_keys, inner_keys, inner_values = item
             outer_keys.insert(0, self.type_)
             Dirs.address_book, Dirs.dir_calc_keys = create_nested_dict(outer_keys, inner_keys, inner_values,
                                                                        Dirs().address_book, Dirs().dir_calc_keys,
                                                                    ["Dirs.address_book", "Dirs.dir_calc_keys"])
-
-class async_pairing_iterator():
-    """
-        iterator through all filepaths and directories
-    """
-    def __init__(self, filepaths, dirpaths):
-        self.filepaths = filepaths
-        self.dirpaths = dirpaths
-        self.counter = -1
-    def __aiter__(self):
-        return self
-    async def __anext__(self):
-        if self.counter >= len(self.filepaths)-1:
-            raise StopAsyncIteration
-        self.counter +=1
-        return await Entry4FromFiles(self.filepaths[self.counter], 'log', 'original'), ["path", "log"], [self.dirpaths[self.counter], self.filepaths[self.counter]]
-
-class toFromFiles_iterator():
-    """
-        Iterator for cycling through the multiple variables required for extraction/collection for result processing method.
-    """
-    def __init__(self, want):
-        self.want = want
-        self.counter = -1
-    def __aiter__(self):
-        return self
-    async def __anext__(self):
-        if self.counter >= len(self.want) - 1:
-            raise StopAsyncIteration
-        self.counter += 1
-        return self.want[self.counter]
 
 async def Entry4FromFiles(path, file, keywrd):
     """
@@ -225,33 +195,6 @@ async def Entry4FromFiles(path, file, keywrd):
     want, var = eval("{}_want[keywrd]".format(file)), eval("{}_var_fo".format(file))
     v2rtn = [iterate(path, var.get(item)) async for item in toFromFiles_iterator(want)]
     return await asyncio.gather(*v2rtn)
-
-class GetDirs_iterator():
-    def __init__(self, cat):
-        self.cat = cat
-        self.counter = -1
-    def __aiter__(self):
-        return self
-    async def __anext__(self):
-        if self.counter >= len(self.cat)-1:
-            raise StopAsyncIteration
-        self.counter +=1
-        return self.cat[self.counter]
-
-class FileExt_iterator():
-    def __init__(self, flexts):
-        self.flexts = flexts
-        self.counter = -1
-    def __aiter__(self):
-        return self
-    async def __anext__(self, update=None):
-        if update:
-            self.flexts = update
-            return
-        if self.counter > len(self.flexts) - 1:
-            raise StopAsyncIteration
-        self.counter += 1
-        return self.counter
 
 def CatalogueFinding(func):
     async def wrapper(self2, type_, fl_exts, section, **kwargs):
