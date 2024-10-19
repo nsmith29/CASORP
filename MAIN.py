@@ -14,7 +14,7 @@ import threading as th
 from shared_memory_dict import SharedMemoryDict
 
 from Core.CentralDefinitions import  Dirs, End, End_Error, ProcessCntrls, SharableDicts, sharable_vars, UArg,\
-    Userwants
+    Userwants, Pool_Args_check
 from Core.DictsAndLists import options, boolconvtr
 from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLines, Delay_Print
 from Core.NoDaemonicChildren_mp import PoolNoDaemonProcess, Rooting
@@ -83,7 +83,6 @@ class Start:
         """
             Asking the user base questions to gain understanding of how user would like the programme to do.
         """
-        time.sleep(5)
         with Global_lock().lock:
             sharable_vars('ProcessCntrls.processwants', ask_question("MQ1", 'list', list(options)))
         with Global_lock().lock:
@@ -115,6 +114,7 @@ if __name__ =='__main__':
     proxylist = manager.list()
     t = time.time()
     Start(cwd, _wd, proxylist, t, sys.argv)
+    p.apply(Pool_Args_check, args=(ProcessCntrls().processwants,))
     run = p.map(Rooting, proxylist[0])
     p.close()
     p.join()

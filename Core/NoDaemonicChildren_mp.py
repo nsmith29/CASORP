@@ -4,7 +4,7 @@ import asyncio
 import multiprocessing as mp
 import multiprocessing.pool
 import time
-from Core.CentralDefinitions import Redistribute
+from Core.CentralDefinitions import Redistribute, ProcessCntrls, Pool_Args
 from Core.DictsAndLists import optdict
 from DataProcessing.ChargesSpins import CntrlChrgSpns
 from DataProcessing.Geometry import CntrlGeometry
@@ -86,5 +86,17 @@ class Rooting:
     def __init__(self, want):
         t = time.time()
         Redistribute(t)
-        run = asyncio.run(eval(str("{}()".format(optdict.get(want)))))
+        arg = arg_apply(want)
+        print('arg is', arg, 'want is', optdict.get(want), '[C.NDC L90]')
+        run = asyncio.run(eval(str("{}".format(optdict.get(want)))))
 
+def arg_apply(want: str):
+    if want == "charges and spins" and "geometry" in ProcessCntrls().processwants:
+        arg = Pool_Args().CaSGeoSender
+        print('arg set to receiver', arg, '[C.NDC L96]')
+    elif want == "geometry" and "charges and spins" in ProcessCntrls().processwants:
+        arg = Pool_Args().CaSGeoRecver
+        print('arg set to sender', arg, '[C.NDC L99]')
+    else:
+        arg = None
+    return arg

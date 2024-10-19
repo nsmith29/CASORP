@@ -19,17 +19,19 @@ from DataProcessing.ProcessCntral import Files4DefiningDefect
 __all__ = {'CntrlChrgSpns', 'BaderProcessing', 'retrieval', 'OnlyProcessing', 'ThreadOne', 'ThreadTwo'}
 
 
-async def CntrlChrgSpns():
+async def CntrlChrgSpns(recver=None):
     # Main Asyncio task - set up subtasks
+    if recver != None:
+        print('recver received', recver, '[DC.CS L25]')
     text = str("\n                                      {bcolors.METHOD}{bcolors.UNDERLINE}CHARGE AND SPIN DATA "
                "PROCESSING{bcolors.ENDC}{bcolors.METHOD}...")
     SlowMessageLines(text)
     event = asyncio.Event()
-    coroutines = [ThreadOne(event), ThreadTwo(event)]
+    coroutines = [ThreadOne(event, recver), ThreadTwo(event)]
     tasks = await asyncio.gather(*coroutines)
     print(tasks)
 
-async def ThreadOne(e1):
+async def ThreadOne(e1, recver):
     result = await  sync_to_async(ask_question)("CaSQ1", "YorN", ['Y', 'N'])
     CaS_Settings.nn_and_def = boolconvtr[result]
     e1.set()
@@ -38,7 +40,7 @@ async def ThreadOne(e1):
     await asyncio.sleep(0.2)
     if CaS_Settings().bader_missing is True:
         if CaS_Settings().nn_and_def is True:
-            await OnlyProcessing()
+            await OnlyProcessing(recver)
             await e1.wait()
             if Ctl_Settings().defining_except_found is True:
                 ErrMessages.CaS_FileNotFoundError(Ctl_Settings().e2_defining['defect'], ".inp and ''.xyz",
@@ -97,9 +99,11 @@ class BaderProcessing(MethodFiles):
             kl.append(dp)
             _, CaS_Settings.dirs_missing_bader = proxyfunction(kl, None, None, None, CaS_Settings().dirs_missing_bader)
 
-async def OnlyProcessing():
+async def OnlyProcessing(recver):
     if 'geometry' in ProcessCntrls().processwants:
-        print("geometry should have worked this out already [code L952]")
+        print("geometry should have worked this out already [DC.CS L104]")
+        if recver:
+            print('this works, recver =', recver, '[DC.CS L106]')
     else:
         await Files4DefiningDefect.setoffassessment("charges and spins", "only")
 

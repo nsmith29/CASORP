@@ -2,9 +2,11 @@
 
 # import json
 import asyncio
+import multiprocessing as mp
+
 import sys
 from shared_memory_dict import SharedMemoryDict
-from Core.DictsAndLists import boolconvtr
+from Core.DictsAndLists import boolconvtr, args4pool
 from Core.Iterables import GetDirs_iterator
 
 __all__ = {'add2addressbook', 'CaS_Settings', 'create_nested_dict', 'CreateSharableDicts', 'Ctl_Settings', 'Dirs',
@@ -123,6 +125,22 @@ class CreateSharableDicts:
     def __init__(self, name, dict):
         SharableDicts().smd[name] = dict
         SharableDicts().smd.shm.close()
+
+class Pool_Args_check:
+    def __init__(self, list):
+        print('checking pool args [C.CD L131]')
+        for cond, func in args4pool.items():
+            print(cond, '[C.CD L133]')
+            if eval("{}".format(cond)) is True:
+                print('condition is True [C.CD L135]')
+                print(func)
+                eval("self.{}()".format(func))
+    def create_pipe(self):
+        print('creating pipe [C.CD L138]')
+        conn1, conn2 = mp.Pipe()
+        for var, value in zip(['Pool_Args.CaSGeoRecver', 'Pool_Args.CaSGeoSender'], [conn1, conn2]):
+            exec(f'{var} = value')
+        print("saved properly", Pool_Args().CaSGeoRecver, Pool_Args().CaSGeoSender, '[C.CD L143]')
 
 class Redistribute:
     def __init__(self, t):
@@ -293,89 +311,74 @@ class Dirs:
     """
         All class properties needed for searching for specific files needed for particular result processing methods.
     """
-
     def __init__(self):
         self._address_book, self._dir_calc_keys = {"perfect": dict(), "defect": dict()}, {"perfect": [], "defect": []}
         self._executables_address =  None
-
     @property
     def address_book(self):
         """
             address_book(dict)           : Dictionary of os.path strs perfect and defect directory paths, and
                                            os.path strs to CP2K output and intermediary files in these directories.
         """
-
         return self._address_book
-
     @address_book.setter
     def address_book(self, dict):
         """
             dict(dict)                   : Updated version of dictionary to replace with
         """
-
         self._address_book = dict
-
     @property
     def dir_calc_keys(self):
         """
             dir_calc_keys(dict)          : Dictionary of lists of nested dictionary keys specific to each
                                            specific nested dictionary entry within the Address_book dictionary.
         """
-
         return self._dir_calc_keys
-
     @dir_calc_keys.setter
     def dir_calc_keys(self, dict):
         """
             dict(dict)                   : Updated version of dictionary to replace with.
         """
-
         self._dir_calc_keys = dict
-
     @property
     def executables_address(self):
         """
             executables_address(os.path) : File path for 'Executables' directory in the CASORP package for execution
                                            of unix executable files needed for results processing method completion.
         """
-
         return self._executables_address
-
     @executables_address.setter
     def executables_address(self, string):
         """
              string(str)                 : File path of directory holding all unix executable files used by CASORP
         """
-
         self._executables_address = string
 
 class Geo_Settings:
-
+    """
+            {perfect : {name1 : {run1: {charge1: {extension1: {'nns' : [{'ai': {'0': nn_a1, '1': nn_a2, '2':nn_a3, '3':nn_a4},
+                                                          {'a2': ...}, ...]
+                                                            },
+                                                            {'bonds': ['a - nn_a', ...]},
+                                                            {'lat paras': [A, B, C]}, ...
+                                                 }, {extension2: ...}, ...
+                                        }, {charge2 : ...}, ,,,
+                                }, {run2 : ...}, ...
+                        }, {name2 : ,,,}, ...
+            }, {defect: ...}
+    """
     def __init__(self):
-        self._nn_dict, self._bonds = {"perfect": dict(), "defect": dict()}, {"perfect": dict(), "defect": dict()}
+        self._structural_data = {"perfect": dict(), "defect": dict()}
         self._perf_Lxyz = ''
-
-
     @property
-    def nn_dict(self):
-        return self._nn_dict
-
-    @nn_dict.setter
-    def nn_dict(self, dict):
-        self._nn_dict = dict
-
-    @property
-    def bonds(self):
-        return self._bonds
-
-    @bonds.setter
-    def bonds(self, dict):
-        self._bonds = dict
-
+    def struc_data(self):
+        return self._structural_data
+    @struc_data.setter
+    def struc_data(self, dict):
+        self._structural_data = dict
     @property
     def perf_lxyz(self):
         return self._perf_Lxyz
-
     @perf_lxyz.setter
     def perf_lxyz(self, str):
         self._perf_Lxyz = str
@@ -384,35 +387,28 @@ class ProcessCntrls:
     """
         Saving the results processing options given by user in commandline input.
     """
-
     def __init__(self):
         self._processwants, self._setup, self._processresults = None, None, {"perfect": dict(), "defect": dict()}
-
     @property
     def processwants(self):
         """
             ProcessWants(None -> list) : Saved list of result processing
                                          methods wanted by user.
         """
-
         return self._processwants
-
     @processwants.setter
     def processwants(self, list):
         """
             list(list)                 : List of result processing options given by user in
                                          commandline input.
         """
-
         self._processwants = list
-
     @property
     def setup(self):
         """
             setup(list)                : List of placeholder item values for pairing and creation
                                          of inner nested dictionary of ProcessResults.
         """
-
         return [f"results for {item}" for item in self.processwants]
 
     @property
@@ -421,55 +417,60 @@ class ProcessCntrls:
             processresults(dict)       : Dictionary of fully calculated result products from each defect
                                          subdirectory for each result processing method wanted by user.
         """
-
         return self._processresults
-
     @processresults.setter
     def processresults(self, dict):
         """
             dict(dict)                 : Updated version of dictionary to replace with
         """
-
         self._processresults = dict
+
+class Pool_Args:
+    def __init__(self):
+        self._CaSGeoRecver, self._CaSGeoSender = None, None
+    @property
+    def CaSGeoRecver(self):
+        return self._CaSGeoRecver
+    @CaSGeoRecver.setter
+    def CaSGeoRecver(self, mp_Connection):
+        self._CaSGeoRecver = mp_Connection
+    @property
+    def CaSGeoSender(self):
+        return self._CaSGeoSender
+    @CaSGeoSender.setter
+    def CaSGeoSender(self, mp_Connection):
+        self._CaSGeoSender = mp_Connection
+
 
 class SaveProperties:
     """
         Saving file path of file and the corresponding specific dictionary of the variable to be extracted.
     """
-
     def __init__(self):
         self._os_path, self._varitem = "", {}
-
     @property
     def os_path(self):
         """
             os_path(os.path) : Saved full directory path to file variable to be extracted from.
         """
-
         return self._os_path
-
     @os_path.setter
     def os_path(self, str):
         """
             str(str)         : Name of file variable to be extracted from.
         """
-
         self._os_path = str
-
     @property
     def varitem(self):
         """
             varitem(dict)    : Specific variable nested var_fo dictionary for file type being searched.
         """
-
         return self._varitem
-
     @varitem.setter
     def varitem(self, dict):
         """
             dict(dict)       : Updated version of dictionary to replace with
         """
-
         self._varitem = dict
 
 class SharableDicts:
@@ -493,98 +494,76 @@ class UArg:
     """
         Saving commandline arguments from user upon execution of MAIN.py as class definitions.
     """
-
     def __init__(self):
         self._cwd, self._perfd, self._defd, self._cptd, self._subd, self._fdsd= '', '', '', '', [], {}
         self._expt, self._only = False, False
-
     @property
     def cwd(self):
         """
 
         """
-
         return self._cwd
-
     @cwd.setter
     def cwd(self, string):
         """
             string(str)       : Name of sudo current working directory.
         """
-
         self._cwd = string
-
     @property
     def perfd(self):
         """
             perfd(os.path)    : Saved full directory path to directory user named as the
                                 directory of CP2K output files for the perfect structure.
         """
-
         return self._perfd
-
     @perfd.setter
     def perfd(self, string):
         """
             string(str)       : Name of directory containing CP2K output files for the perfect
                                 defect-free material structure given by user.
         """
-
         self._perfd = string
-
     @property
     def defd(self):
         """
             defd(os.path)     : Saved full directory path to directory user named as the parent
                                 directory of particular type of defect studied within material.
         """
-
         return self._defd
-
     @defd.setter
     def defd(self, string):
         """
             string(str)       : Name of parent directory of particular  type of defect studied
                                 within material given by user.
         """
-
         self._defd = string
-
     @property
     def cptd(self):
         """
             cptd(os.path)     : Saved full directory path to directory user named as the parent
                                 directory for individual calc reference chem pots.
         """
-
         return self._cptd
-
     @cptd.setter
     def cptd(self, string):
         """
             string(str)       : Name of parent directory of subdirectories for individual calc
                                 reference chem pots for host and/or impurity elements in material.
         """
-
         self._cptd = string
-
     @property
     def subd(self):
         """
             subd(list)        : Saved list of subdirectory names given by user at the end of the
                                 commandline arguments after keyword only or except.
         """
-
         return self._subd
-
     @subd.setter
     def subd(self, list):
         """
             list(list)        : List of subdirectory names user wants to be excluded from data processing.
         """
-
         self._subd = list
-
     @property
     def fdsd(self):
         """
@@ -596,42 +575,32 @@ class UArg:
                 self._fdsd[str(sub)] = False
         else:
             self._fdsd = self._fdsd
-
         return self._fdsd
-
     @fdsd.setter
     def fdsd(self, dict):
         """
             dict(dict)        : Updated version of dictionary to replace with.
         """
-
         self._fdsd = dict
-
     @property
     def expt(self):
         """
             expt(boolean)     : True if user wants all defect subdirectories except ones stated after
                                 in commandline arguments to be included in the data processing.
         """
-
-
         return True if self.subd != [] and self.only is False else False
-
     @property
     def only(self):
         """
             only(boolean)     : True if user wants only data processing of data within subdirectories
                                 stated after in command line argument.
         """
-
         return self._only
-
     @only.setter
     def only(self, YorN):
         """
             list(list)        : List of subdirectory names user only wants to be data processed.
         """
-
         self._only = YorN
 
 class Userwants:
