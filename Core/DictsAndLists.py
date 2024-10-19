@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-__all__ = {'argv_dict', 'boolconvtr', 'defect_type', 'files4res', 'functions', 'inp_var_fo', 'inp_want', 'log_var_fo',
-           'log_want', 'multiplefiles4extension', 'optdict', 'options',  'questions'}
+__all__ = {'args4pool', 'argv_dict', 'boolconvtr', 'defect_type', 'files4res', 'finding_conditions',
+           'functions', 'inp_var_fo', 'inp_want', 'log_var_fo', 'log_want', 'multiplefiles4extension', 'optdict',
+           'options', 'questions'}
 
 ## LISTS
 options = ("band structure", "charges and spins", "charge transition levels", "geometry", "IPR", "PDOS", "WFN",
@@ -10,6 +11,8 @@ options = ("band structure", "charges and spins", "charge transition levels", "g
 multiplefiles4extension = [".txt", ".png", "1-1_l.cube", "2-1_l.cube", ".wfn", ".dat", ".pdos", ".log", '-L.xyz']
 
 ## DICTIONARIES
+args4pool = {"'charges and spins' and 'geometry' in list": "create_pipe"}
+
 argv_dict = {"1": "{bcolors.ITALIC}the name of the {bcolors.KEYINFO}{bcolors.BOLD}directory{bcolors.ENDC}"
                   "{bcolors.ITALIC}{bcolors.INFO} of CP2K output files for the {bcolors.KEYINFO}{bcolors.BOLD}"
                   "perfect, defect-free material{bcolors.ENDC}{bcolors.ITALIC}{bcolors.INFO}.",
@@ -140,6 +143,10 @@ files4res ={"band structure":{
                          ,"final_output":[]}
 }
 
+finding_conditions = {"[True][False]": str("not path_.endswith(tuple(UArg.subd))"),
+                      "[False][True]": str("path_.endswith(tuple(UArg.subd))"),
+                      "[False][False]": ""}
+
 functions = {"charges and spins": "BaderFileCreation",
              "Geometry": "GeometryLastCreation"}
 
@@ -205,9 +212,9 @@ inp_var_fo = {"xyz1st": {"locate": ['COORD_FILE_NAME', "&END COORD", ['find_xyz'
               }
 
 optdict= {"band structure": None,
-          "charges and spins": "CntrlChrgSpns",
+          "charges and spins": "CntrlChrgSpns(arg)",
           "charge transition levels": None,
-          "geometry": "CntrlGeometry",
+          "geometry": "CntrlGeometry(arg)",
           "IPR": None,
           "PDOS": None,
           "WFN": None,

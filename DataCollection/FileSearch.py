@@ -7,7 +7,7 @@ import os
 import subprocess
 
 from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg, add2addressbook
-from Core.DictsAndLists import  files4res, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
+from Core.DictsAndLists import  files4res, finding_conditions, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
 from Core.Iterables import async_pairing_iterator, toFromFiles_iterator, GetDirs_iterator, FileExt_iterator
 from Core.Messages import ErrMessages, Global_lock
@@ -155,10 +155,7 @@ class DirsAndLogs(Finding):
         """
             Stating conditions to be met for any restrictions [only/except used for commandline arg[4]] set by user.
         """
-        conditions = {"[True][False]": str("not path_.endswith(tuple(UArg.subd))"),
-                      "[False][True]": str("path_.endswith(tuple(UArg.subd))"),
-                      "[False][False]": ""}
-        return conditions.get(str("[{}][{}]".format(UArg().expt, UArg().only)))
+        return finding_conditions.get(str("[{}][{}]".format(UArg().expt, UArg().only)))
     @verify_only
     def dir_tree_transversing(self):
         """
@@ -248,7 +245,7 @@ class MethodFiles(Method):
     @CatalogueFinding
     async def assessment_tree(self2, keylst, sect, extension, fnd, flpath, Q, path=None, exchange=None):
         if exchange:
-            self2.keywrd, self2.res = exchange, files4res[exchange]
+            self2.keywrd, self2.res = exchange[0], files4res[exchange[0]][exchange[1]]
         if sect is True and fnd is not True:
             await self2.option1(keylst, Q)
             rtn = 'pass'

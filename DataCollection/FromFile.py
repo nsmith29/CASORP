@@ -3,12 +3,13 @@
 import aiofiles
 import asyncio
 from Core.DictsAndLists import inp_var_fo, inp_want, log_var_fo, log_want
+from Core.Iterables import Lines_iterator
 from DataCollection.Log import find_a, find_at, find_charge, find_energy, find_gap, find_kind, find_name, find_pop1, \
     find_pop2, find_run, find_version
 from DataCollection.Inp import xyz
 
 
-__all__ = {'Update', 'inline', 'Lines_iterator', 'AsyncIterateManager', 'read_file_async', 'iterate'}
+__all__ = {'Update', 'inline', 'AsyncIterateManager', 'read_file_async', 'iterate'}
 
 async def read_file_async(filepath):
     """
@@ -68,26 +69,6 @@ async def inline(ln, loc):
         return True
     else:
         return False
-
-class Lines_iterator():
-    """
-        index and ln iteratables creator.
-    """
-    def __init__(self, lines):
-        self.lines = lines
-        self.lns = [ln for ln in reversed(lines)]
-        self.lcounter = -1
-        self.counter = 0
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        if self.counter <= -len(self.lines):
-            raise StopAsyncIteration
-        self.counter -= 1
-        self.lcounter += 1
-        return [self.counter, self.lns[self.lcounter]]
 
 class AsyncIterateManager:
     """
