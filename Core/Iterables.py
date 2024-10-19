@@ -2,7 +2,8 @@
 
 import asyncio
 
-__all__ = {}
+__all__ = {'async_pairing_iterator', 'GetDirs_iterator', 'FileExt_iterator', 'keylist_iterator', 'Lines_iterator',
+           'toFromFiles_iterator'}
 
 class async_pairing_iterator():
     """
@@ -59,6 +60,26 @@ class keylist_iterator():
             raise StopAsyncIteration
         self.counter +=1
         return self.dif_chrgs[self.counter]
+
+class Lines_iterator():
+    """
+        index and ln iteratables creator.
+    """
+    def __init__(self, lines):
+        self.lines = lines
+        self.lns = [ln for ln in reversed(lines)]
+        self.lcounter = -1
+        self.counter = 0
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self.counter <= -len(self.lines):
+            raise StopAsyncIteration
+        self.counter -= 1
+        self.lcounter += 1
+        return [self.counter, self.lns[self.lcounter]]
 
 class toFromFiles_iterator():
     """
