@@ -17,7 +17,13 @@ class Files4DefiningDefect(MethodFiles):
         self2 = cls(keyword, subkeyword)
         await super().assessment_tree(self2, self2.types[1], [self2.flexts_[1][0]], False, **kwargs) # defect
         if keyword != "geometry":
-            await super().assessment_tree(self2, self2.types[0], self2.flexts_[0], True,  exchange='geometry') # perfect
+            await super().assessment_tree(self2, self2.types[0], self2.flexts_[0], True,  exchange=['geometry','standard']) # perfect
+        [Ctl_Settings().i_defining['defect'].remove(it) for it in [[n,r,c,e] for n,r,c,e in Ctl_Settings().i_defining['defect']
+                                                                   for n_,r_,c_,p in Ctl_Settings().e2_defining['defect']
+                                                                   if n == n_ and r == r_ and c_ == c]]
+        if Ctl_Settings().e2_defining['defect'] == [] and Ctl_Settings().defining_except_found is True:
+            Ctl_Settings.defining_except_found = False
+
     async def option2(self2, keylst, extension, flpath, Q):
         return await eval("self2.option2{}".format(keylst[0]))(keylst, extension, flpath, Q)
 
@@ -31,7 +37,7 @@ class Files4DefiningDefect(MethodFiles):
             await Q.put([False, xyzname])
         else:
             # check if same initial xyz file not found for any diff charge state dirs of same name & runtype when checked
-            if Ctl_Settings.defining_except_found is True:
+            if Ctl_Settings().defining_except_found is True:
                 dif_chrgs = [[n, r, c, e] for n, r, c, e in Ctl_Settings().i_defining['defect'] if n==k[1] and r==k[2] and c!=k[3] and e==et]
                 async for n, r, c, e in keylist_iterator(dif_chrgs):
                     if  str(self2.flexts_[1][1]+"*") not in Dirs().address_book['defect'][n][r][c].keys():
