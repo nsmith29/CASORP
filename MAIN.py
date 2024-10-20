@@ -24,7 +24,7 @@ def programme_setup(wd):
     Dirs.executables_address = pth.join(wd, "Executables")
 
 class Start:
-    def __init__(self, cwd, _wd, proxylist, t, *args):
+    def __init__(self, cwd, _wd, proxylist, t, *args):#
         """
             Processing command line arguments upon running of MAIN.py. Decides code path to take.
         """
@@ -62,7 +62,7 @@ class Start:
             break
         while End.triggered is True:
             sys.exit(1)
-        self.proxylist.append(ProcessCntrls().processwants)
+        # self.proxylist.append(ProcessCntrls().processwants)
         self.Return()
     def branch_(self, c_, q_, t):
         t1 = th.Thread(target=Cataloging, args=(UArg.perfd, 'perfect'))
@@ -84,7 +84,13 @@ class Start:
             Asking the user base questions to gain understanding of how user would like the programme to do.
         """
         with Global_lock().lock:
-            sharable_vars('ProcessCntrls.processwants', ask_question("MQ1", 'list', list(options)))
+            answer  = ask_question("MQ1", 'list', list(options))
+            if type(answer) == tuple:
+                self.proxylist.append(list(answer)[0])
+                answer = list(answer)[1]
+            else:
+                self.proxylist.append(answer)
+            sharable_vars('ProcessCntrls.processwants', answer)
         with Global_lock().lock:
             sharable_vars('Userwants.analysiswants',  boolconvtr[ask_question("MQ2", "YorN", ['Y', 'N'])])
         with Global_lock().lock:
@@ -108,13 +114,12 @@ class Start:
 if __name__ =='__main__':
     smd = SharableDicts().smd
     smd.shm.close()
-    CPUs2use, manager = int(os.cpu_count() * 2 / 3), mp.Manager()
+    CPUs2use, manager  = int(os.cpu_count() * 2 / 3), mp.Manager()
     _wd, cwd =  os.getcwd(), '/Users/appleair/Desktop/PhD/Jupyter_notebooks/Calculations/PBE0_impurities_analysis/Only_PBE0'
-    p = PoolNoDaemonProcess() # CPUs2use
     proxylist = manager.list()
     t = time.time()
-    Start(cwd, _wd, proxylist, t, sys.argv)
-    p.apply(Pool_Args_check, args=(ProcessCntrls().processwants,))
+    Start(cwd, _wd, proxylist, t, sys.argv) #
+    p = PoolNoDaemonProcess()  # CPUs2use
     run = p.map(Rooting, proxylist[0])
     p.close()
     p.join()

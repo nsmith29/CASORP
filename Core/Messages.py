@@ -10,7 +10,7 @@
 import sys
 import time
 import threading as th
-from Core.CentralDefinitions import UArg
+from Core.CentralDefinitions import UArg, Pool_Args_check
 from Core.DictsAndLists import argv_dict, options, questions
 
 
@@ -575,13 +575,17 @@ def checkinput(func):
                 if isinstance(A, list) == True:
                     if len([a for a in A if a not in ans]) != 0:
                         raise ValueError
+                    Acopy = A.copy()
+                    _ = Pool_Args_check(Acopy).Return()
+                    if _ != A:
+                        A = (_, A)
                 else:
                     if A not in ans:
                         raise ValueError
             except:
                 # trigger error informing user that they've given an input which is invalid.
                 eval("ErrMessages.ValueError{}()".format(typ))
-                A = func(Q, typ, ans)
+                A = ask_question(Q, typ, ans)
             break
         return A
     return wrapper

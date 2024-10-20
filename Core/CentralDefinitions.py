@@ -128,19 +128,21 @@ class CreateSharableDicts:
 
 class Pool_Args_check:
     def __init__(self, list):
-        print('checking pool args [C.CD L131]')
+        self.list = []
+        print(type(list), 'C.CD L131')
         for cond, func in args4pool.items():
-            print(cond, '[C.CD L133]')
             if eval("{}".format(cond)) is True:
-                print('condition is True [C.CD L135]')
-                print(func)
-                eval("self.{}()".format(func))
-    def create_pipe(self):
-        print('creating pipe [C.CD L138]')
-        conn1, conn2 = mp.Pipe()
-        for var, value in zip(['Pool_Args.CaSGeoRecver', 'Pool_Args.CaSGeoSender'], [conn1, conn2]):
-            exec(f'{var} = value')
-        print("saved properly", Pool_Args().CaSGeoRecver, Pool_Args().CaSGeoSender, '[C.CD L143]')
+                self.list = eval("self.{}(list)".format(func))
+        if self.list == []:
+            self.list = list
+    def create_pipe(self, list_):
+        con1, con2 = mp.Pipe()
+        list_[list_.index("charges and spins")] = ("charges and spins", con1)
+        list_[list_.index("geometry")] = ("geometry", con2)
+        return list_
+    def Return(self):
+        return self.list
+
 
 class Redistribute:
     def __init__(self, t):
@@ -162,6 +164,14 @@ class ResultsUpdate:
         ProcessCntrls().processresults[t][n][r][c].update({method : result})
 
 # class properties
+
+class NewProperty:
+    def __init__(self, Klass):
+        self.klass = Klass
+        self.name = Klass.__name__
+    def _get__(self, obj, type=None) -> object:
+        obj.__dict__[self.name] = self.klass(obj)
+        return obj.__dict__[self.name]
 
 class Ctl_Settings:
     def __init__(self):
@@ -410,7 +420,6 @@ class ProcessCntrls:
                                          of inner nested dictionary of ProcessResults.
         """
         return [f"results for {item}" for item in self.processwants]
-
     @property
     def processresults(self):
         """
@@ -425,22 +434,28 @@ class ProcessCntrls:
         """
         self._processresults = dict
 
-class Pool_Args:
-    def __init__(self):
-        self._CaSGeoRecver, self._CaSGeoSender = None, None
-    @property
-    def CaSGeoRecver(self):
-        return self._CaSGeoRecver
-    @CaSGeoRecver.setter
-    def CaSGeoRecver(self, mp_Connection):
-        self._CaSGeoRecver = mp_Connection
-    @property
-    def CaSGeoSender(self):
-        return self._CaSGeoSender
-    @CaSGeoSender.setter
-    def CaSGeoSender(self, mp_Connection):
-        self._CaSGeoSender = mp_Connection
-
+# class Pool_Args:
+#     CaSGeoRecver, CaSGeoSender = None, None
+#     def __init__(self):
+#         self._CaSGeoRecver = None
+#         self._CaSGeoSender = None
+#     @classmethod
+#     def CaSGeoPipe(cls, pipe):
+#         print(pipe)
+#         self = cls()
+#         self._CaSGeoRecver = pipe[0]
+#         self._CaSGeoSender = pipe[1]
+#         self.attributes_set(pipe[0], pipe[1])
+#     @classmethod
+#     def attributes_set(cls, value1, value2):
+#         Pool_Args.CaSGeoRecver = value1
+#         Pool_Args.CaSGeoSender = value2
+#     @NewProperty
+#     def CaSGeoRecver_(self):
+#         return self._CaSGeoRecver
+#     @NewProperty
+#     def CaSGeoSender_(self):
+#         return self._CaSGeoSender
 
 class SaveProperties:
     """
