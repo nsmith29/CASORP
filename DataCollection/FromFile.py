@@ -123,47 +123,13 @@ class Update:
     """
     def __init__(self2, varitem):
         self2.varit = varitem
-    # def found(self2):
-    #     """
-    #         Updating the item value of the "found" key of a variable from False to None.
-    #     """
-    #
-    #     self2.varit.update({"found": None})
+
     def extra(self2, list):
         """
             Updating with intermediate data collected during searching the log file.
         """
         for i in range(0, int(len(list) / 2)):
             self2.varit.update({list[int(2 * i)]: list[int(2 * i + 1)]})
-    # def switch(self2):
-    #     """
-    #        Switch item values so alternative str is started to be looked for in file.
-    #     """
-    #
-    #     rnge = int(len(self2.varit["switch"]) / 2)
-    #     keys, values = [self2.varit["switch"][i] for i in range(0, rnge)], [self2.varit[self2.varit["switch"][rnge + i]]
-    #                                                                        for i in range(0, rnge)]
-    #     [self2.varit.update({key : value}) for key, value in zip(keys, values)]
-    #
-    #     self2.varit.update({"swapped": True})
-    #
-    # def reset(self2):
-    #     """
-    #         Resetting varitem dictionary to defaults.
-    #     """
-    #
-    #     self2.varit.update({"found": False})
-    #
-    #     if "reset" in self2.varit and self2.varit["reset"]:
-    #         [self2.varit.update({self2.varit["reset"][int(2 * i)]: self2.varit["reset"][2 * i + 1]}) for i in
-    #          range(0, int(len(self2.varit["reset"]) / 2))]
-    #
-    #     elif "swapped" in self2.varit and self2.varit["swapped"] is True:
-    #         self2.switch()
-    #         self2.varit.update({"swapped": False})
-
-
-
 
 
 

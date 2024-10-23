@@ -84,8 +84,7 @@ class Rooting:
                             result processing methods chosen by user.
     """
     def __init__(self, want):
-        t = time.time()
-        Redistribute(t)
+        Redistribute()
         want, arg = arg_apply(want)
         run = asyncio.run(eval(str("{}".format(optdict.get(want)))))
 
