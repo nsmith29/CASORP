@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
-from Core.CentralDefinitions import Dirs,  UArg, Ctl_Settings, proxyfunction, add2addressbook
+from Core.CentralDefinitions import Dirs,  UArg, Ctl_Settings, proxyfunction, add2addressbook, Geo_Settings, create_nested_dict
 from Core.Iterables import keylist_iterator
 from DataCollection.FileSearch import MethodFiles, Entry4FromFiles
 
@@ -23,25 +23,27 @@ class Files4DefiningDefect(MethodFiles):
                                                                    if n == n_ and r == r_ and c_ == c]]
         if Ctl_Settings().e2_defining['defect'] == [] and Ctl_Settings().defining_except_found is True:
             Ctl_Settings.defining_except_found = False
-
+        for item in Ctl_Settings().i_defining['defect']:
+            item.pop(-1)
     async def option2(self2, keylst, extension, flpath, Q):
         return await eval("self2.option2{}".format(keylst[0]))(keylst, extension, flpath, Q)
-
     async def option2defect(self2, k, et, flpath, Q):
         paths, rtn, fnd = et if et == '.inp' else self2.flexts_[1][1], 'pass' if et == '.inp' else 'continue', False if et != '.inp' else None
-        if len(flpath) > 1 and et == '.inp':
+        if type(flpath) == list and len(flpath) > 1 and et == '.inp':
             flpath.pop(-1)
         Dirs.address_book = add2addressbook(k, [paths], [flpath], Dirs().address_book)
         if et == '.inp':
-            xyzname = await Entry4FromFiles(flpath[0], 'inp', self2.keywrd)
+            xyzname = await Entry4FromFiles(flpath[0], 'inp', self2.keywrd) if type(flpath) == list else await Entry4FromFiles(flpath, 'inp', self2.keywrd)
             await Q.put([False, xyzname])
         else:
             # check if same initial xyz file not found for any diff charge state dirs of same name & runtype when checked
+            self2.structural_data(k)
             if Ctl_Settings().defining_except_found is True:
                 dif_chrgs = [[n, r, c, e] for n, r, c, e in Ctl_Settings().i_defining['defect'] if n==k[1] and r==k[2] and c!=k[3] and e==et]
                 async for n, r, c, e in keylist_iterator(dif_chrgs):
                     if  str(self2.flexts_[1][1]+"*") not in Dirs().address_book['defect'][n][r][c].keys():
                         Dirs.address_book = add2addressbook(['defect', n, r, c], [str(paths+'*')], [flpath], Dirs().address_book)
+                        self2.structural_data(['defect', n, r, c])
                         path = [p for n_, r_, c_, p in Ctl_Settings().e2_defining['defect'] if n_==n and r_==r and c_==c][0]
                         Ctl_Settings().e2_defining['defect'].remove([n, r, c, path])
                         print('found for', n, r, c, e)
@@ -72,15 +74,24 @@ class Files4DefiningDefect(MethodFiles):
             # check if these diff charge state dir w/ same name & runtype have had path of initial xyz file found.
             if self2.flexts_[1][1] in Dirs().address_book['defect'][n][r][c].keys():
                 # check if initial xyz in diff charge state dir w/ same name & runtype is same as looking for, for k.
-                if e == str(Dirs().address_book['defect'][n][r][c][self2.flexts_[1][1]][0]).split('/')[-1]:
-                    path = Dirs().address_book['defect'][n][r][c][self2.flexts_[1][1]][0]
+                if e == str(Dirs().address_book['defect'][n][r][c][self2.flexts_[1][1]]).split('/')[-1]:
+                    path = Dirs().address_book['defect'][n][r][c][self2.flexts_[1][1]]
                     # remove k from dictionary of dirs where analysis may not be able to be done due to missing files.
                     Ctl_Settings().e2_defining['defect'].remove([k[1], k[2], k[3], k[-1]])
                     # add initial xyz of diff charge state w/ same name & runtype to k's book & indicate assumed path w/ *
                     Dirs.address_book = add2addressbook(k, [str(self2.flexts_[1][1] + '*')], [path], Dirs().address_book)
+                    self2.structural_data(k)
                     break
         if e != '.inp':
             # prep keylist to save in dict of dirs where diff charge state dirs of same name & runtype searched for file
             k.remove(l_dir_in_path)
             k.append(e)
             _, Ctl_Settings.i_defining = proxyfunction(k, None, None, None, Ctl_Settings().i_defining)
+    def structural_data(self2, keys):
+        # print(keys)
+        # if 'lat paras' not in Geo_Settings.struc_data[keys[0]][keys[1]][keys[2]][keys[3]].keys():
+        Geo_Settings.struc_data, _ = create_nested_dict(keys, [self2.flexts_[1][1], 'lat paras', 'defect indx'],
+                                                     [{'nns': [], 'bonds': []}, [], []],
+                                                    Geo_Settings().struc_data)
+        # else:
+        #     Geo_Settings.struc_data = add2addressbook(keys, [self2.flexts_[1][1]], [{'nns': [], 'bonds': []}], Geo_Settings().struc_data)

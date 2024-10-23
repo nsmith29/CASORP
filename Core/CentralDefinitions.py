@@ -61,7 +61,7 @@ def savekeys(func):
         return d1, d2
     return wrapper
 
-def add2addressbook(keys,subkeys, path, d):
+def add2addressbook(keys, subkeys, path, d):
     for sub, val in zip(subkeys, path):
         # if sub not in d[keys[0]][keys[1]][keys[2]][keys[3]].keys():
         d[keys[0]][keys[1]][keys[2]][keys[3]][sub] = val
@@ -75,8 +75,8 @@ def create_nested_dict(keys, subkeys, paths, d):
 
     assert isinstance(keys, list), "keys must be a list of major outer nested dict keys strs"
     assert isinstance(subkeys, list), "subkeys must be a list of minor inner nested keys strs"
-    assert isinstance(paths, list), "path must be a list of os.path() file path strs"
-    assert isinstance(d, dict), "d must be a dictionary which can be populated with keys, subkeys, and paths"
+    assert isinstance(paths, list), "path must be a list [usually of os.path() file path strs]"
+    assert isinstance(d, dict), f"d must be a dictionary which can be populated with keys, subkeys, and paths, type of d is {type(d)}"
     assert keys[0] in d.keys(), "First str item in keys must be a key within d"
 
     d_, ks = {keys[0]: d[keys[0]]}, ''
@@ -151,7 +151,7 @@ class End_Error:
         if eval("{}".format(cond)) is True:
             return
         try:
-            if eval(cond) is False:
+            if eval("{}".format(cond)) is False:
                 raise Exception
         except:
             msg
@@ -159,7 +159,6 @@ class End_Error:
             smd.shm.close()
             smd.shm.unlink()
             End.triggered = True
-
             sys.exit(1)
 
 class CreateSharableDicts:

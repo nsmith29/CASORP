@@ -8,7 +8,7 @@ import pandas as pd
 import sys
 
 from Core.CentralDefinitions import CaS_Settings, Ctl_Settings, Dirs, proxyfunction, UArg, ProcessCntrls, percalcdir, \
-    ResultsUpdate, SharableDicts
+    ResultsUpdate, Redistribute, SharableDicts
 from Core.DictsAndLists import boolconvtr
 from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLines
 from DataCollection.FileSearch import  MethodFiles, Entry4FromFiles
@@ -29,7 +29,6 @@ async def CntrlChrgSpns(recver=None):
     event = asyncio.Event()
     coroutines = [ThreadOne(event, recver), ThreadTwo(event)]
     tasks = await asyncio.gather(*coroutines)
-    print(tasks)
 
 async def ThreadOne(e1, recver):
     result = await  sync_to_async(ask_question)("CaSQ1", "YorN", ['Y', 'N'])
@@ -50,7 +49,7 @@ async def ThreadOne(e1, recver):
             await e1.wait()
     else:
         await percalcdir(retrieval)('defect')
-    return True
+    return
     # 1. Ask question CaSQ1
     # 2. if True, OnlyProcessing; if False, wait for answer to whether there is errors from BaderProcessing
 
@@ -68,9 +67,7 @@ async def ThreadTwo(e1):
             _ = calclist.pop(3)
     await asyncio.sleep(0.5)
     await percalcdir(retrieval)('perfect')
-    return True
-    # 1. BaderProcessing
-    # 2. Check for errors from BaderProcessing
+    return
 
 class BaderProcessing(MethodFiles):
     def __init__(self2):
@@ -102,6 +99,9 @@ class BaderProcessing(MethodFiles):
 async def OnlyProcessing(recver):
     if 'geometry' in ProcessCntrls().processwants:
         print("geometry should have worked this out already [DC.CS L104]")
+        for name in ['defining_except_found', 'e2_defining', 'i_defining']:
+            key = str('Ctl_Settings.' + name)
+            Redistribute(key)
         if recver:
             print('this works, recver =', recver, '[DC.CS L106]')
     else:
@@ -121,14 +121,14 @@ async def retrieval(type_, n, r, c, indices=None):
     clmnstrngs.extend(["Hirshfeld, \u03B1 pop", "Hirshfeld, \u03B2 pop", "Hirshfeld, charges", "Hirshfeld, spins"])
     for indx, matline in zip(indices, hirshfeld):
         TypeC[indx].extend(matline)
-    if CaS_Settings().bader_break is not True and [n, r, c] not in CaS_Settings().dirs_missing_bader[type_]:
-        f, a = Dirs().address_book[type_][n][r][c]["ACF.dat"][0], int(SharableDicts().smd['total atoms'][0])
+    if CaS_Settings().bader_break is not True and CaS_Settings().cont_bdr is True and [n, r, c] not in CaS_Settings().dirs_missing_bader[type_]:
+        f, a = Dirs().address_book[type_][n][r][c]["ACF.dat"], int(SharableDicts().smd['total atoms'][0])
         bader = np.loadtxt(f, skiprows=2, usecols=4, max_rows=a, unpack=True)
         clmnstrngs.append("Bader")
         for indx in indices:
             matline = bader[indx]
             TypeC[indx].append(round(int(matline), 3))
-    elif CaS_Settings().bader_break is not True and [n, r, c] in CaS_Settings().dirs_missing_bader[type_]:
+    elif CaS_Settings().bader_break is not True and CaS_Settings().cont_bdr is True and [n, r, c] in CaS_Settings().dirs_missing_bader[type_]:
         print(n, r, c)
     df = pd.DataFrame(TypeC,
                       columns=clmnstrngs, index=indexstrings)

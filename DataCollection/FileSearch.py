@@ -213,6 +213,7 @@ def CatalogueFinding(func):
                         print(j, flexts)
                     find = Finding(path, flexts[j], True)
                     fnd, filepaths = await sync_to_async(find.returning)()
+                    filepaths = filepaths[0] if len(filepaths) == 1 else filepaths
                     _ = [Ars.insert(0, path) if pair[j] == None else Ars]
                     Ars_ = Ars if pair[j] == None else []
                     rtn = await func(self2, keylst, pair[j], flexts[j], fnd, filepaths, Q, *eval("{}".format(Ars_)))
