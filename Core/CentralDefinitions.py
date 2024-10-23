@@ -6,16 +6,32 @@ import multiprocessing as mp
 
 import sys
 from shared_memory_dict import SharedMemoryDict
+import Core
 from Core.DictsAndLists import boolconvtr, args4pool
 from Core.Iterables import GetDirs_iterator
 
 __all__ = {'add2addressbook', 'CaS_Settings', 'create_nested_dict', 'CreateSharableDicts', 'Ctl_Settings', 'Dirs',
            'End', 'End_Error', 'Geo_Settings', 'GetDirs', 'proxyfunction', 'ProcessCntrls', 'Redistribute',
-           'ResultsUpdate', 'SaveProperties', 'SharableDicts', 'sharable_vars', 'TESTING', 'savekeys', 'UArg',
+           'ResultsUpdate', 'SharableDicts', 'sharable_vars', 'TESTING', 'savekeys', 'UArg',
            'Userwants'}
 
-
 ## functions
+
+def sort_charges(list):
+    pos, neg, zero = [], [], []
+    if list == []:
+        return list
+    for indx, i_ in enumerate(list):
+        if '+' in str(i_[2]):
+            pos.append(i_)
+        elif '-' in str(i_[2]):
+            neg.append(i_)
+        else:
+            zero.append(i_)
+    for lst in [pos, neg]:
+        sorted(lst)
+    rtn = pos + zero + neg
+    return rtn
 
 def savekeys(func):
     """
@@ -31,7 +47,15 @@ def savekeys(func):
             if not d2[keys[0]]:
                 d2[keys[0]] = [keys[1:]]
             elif len(keys) == 4 and [keys[1], keys[2], keys[3]] not in d2[keys[0]] or len(keys) == 5 and [keys[1], keys[2], keys[3], keys[4]] not in d2[keys[0]]:
-                d2[keys[0]].append(keys[1:])
+                inner = sort_charges([item for item in d2[keys[0]] if keys[1] in item and keys[2] in item])
+                if len(inner) > 0:
+                    indx = sorted([d2[keys[0]].index(item) for item in inner])
+                    for idx, item in zip(indx, inner):
+                        d2[keys[0]].pop(idx)
+                        d2[keys[0]].insert(idx, item)
+                    d2[keys[0]].insert((d2[keys[0]].index(inner[-1]) + 1), keys[1:])
+                else:
+                    d2[keys[0]].append(keys[1:])
             if name:
                 CreateSharableDicts(name[1], d2)
         return d1, d2
@@ -56,14 +80,23 @@ def create_nested_dict(keys, subkeys, paths, d):
     assert keys[0] in d.keys(), "First str item in keys must be a key within d"
 
     d_, ks = {keys[0]: d[keys[0]]}, ''
+    if TESTING.in_progress is True:
+        print("[C.CD L60] d_ =", d_, "ks =", ks)
     for indx, key in enumerate(keys):
         d__ = eval("d_{}".format(ks))
-
+        if TESTING.in_progress is True:
+            print("[C.CD L64] d__ =", d__ )
         if key in eval("d_{}".format(ks)) and key == keys[-1]:
             k_ = [k for k, v in d__.items()][0]
+            if TESTING.in_progress is True:
+                print("[C.CD L68] k_=", k_)
             for sub, path in zip(subkeys, paths):
+                if TESTING.in_progress is True:
+                    print("[C.CD L71] sub =", sub, "path =", path)
                 if str("{} : {}".format(sub, path)) not in d__[k_]:
                     d__[k_][sub] = path
+                    if TESTING.in_progress is True:
+                        print("[C.CD L75] d__=", d__, "k_=", k_, "sub", sub, "d__[k_][sub] =", f"{d__}[{k_}][{sub}] =", d__[k_][sub])
 
         if key not in eval("d_{}".format(ks)):
             if d__ == {}:
@@ -74,10 +107,18 @@ def create_nested_dict(keys, subkeys, paths, d):
                 if key == keys[-1]:
                     for sub, path in zip(subkeys, paths):
                         d__[key][sub] = path
+            if TESTING.in_progress is True:
+                print('[c.CD L87] d__ = ', d__)
             exec(f"d_{ks} = d__ ")
+            if TESTING.in_progress is True:
+                print("[C.CD L90] d_{ks} =", f"d_{ks} =", eval("d_{}".format(ks)))
 
-        ks = ks + str("['{}']".format(key))
+        ks = ks + str("['{}']".format(key)) if type(key) == str else ks + str("[{}]".format(key))
+        if TESTING.in_progress is True:
+            print("[C.CD L94] ks =", ks)
         d.update({keys[0]: d_[keys[0]]})
+        if TESTING.in_progress is True:
+            print("[C.CD L97] d =", d)
 
     return d
 
@@ -97,10 +138,10 @@ def GetDirs(func):
     return wrapper
 
 def percalcdir(func):
-    async def wrapper(type_, indices=None):
+    async def wrapper(type_, **kwargs):
         async for item_ in GetDirs_iterator(Dirs().dir_calc_keys[type_]):
             n, r, c = item_[0], item_[1], item_[2]
-            await func(type_, n, r, c, indices)
+            await func(type_, n, r, c, **kwargs)
     return wrapper
 
 # classes
@@ -129,7 +170,7 @@ class CreateSharableDicts:
 class Pool_Args_check:
     def __init__(self, list):
         self.list = []
-        print(type(list), 'C.CD L131')
+        # print(type(list), 'C.CD L131')
         for cond, func in args4pool.items():
             if eval("{}".format(cond)) is True:
                 self.list = eval("self.{}(list)".format(func))
@@ -143,13 +184,15 @@ class Pool_Args_check:
     def Return(self):
         return self.list
 
-
 class Redistribute:
-    def __init__(self, t):
-        for key in SharableDicts().smd.keys():
-            exec(f'{key} = SharableDicts().smd[key]')
-        self.populate_processresults('perfect')
-        self.populate_processresults('defect')
+    def __init__(self, Key = None):
+        if Key is None:
+            for key in SharableDicts().smd.keys():
+                exec(f'{key} = SharableDicts().smd[key]')
+            self.populate_processresults('perfect')
+            self.populate_processresults('defect')
+        else:
+            exec(f'{Key} = SharableDicts().smd[Key]')
         SharableDicts().smd.shm.close()
     @GetDirs
     def populate_processresults(self, type, n, r, c):
@@ -165,154 +208,78 @@ class ResultsUpdate:
 
 # class properties
 
-class NewProperty:
-    def __init__(self, Klass):
-        self.klass = Klass
-        self.name = Klass.__name__
-    def _get__(self, obj, type=None) -> object:
-        obj.__dict__[self.name] = self.klass(obj)
+class NewProperty(object):
+    def __init__(self, function):
+        self.function = function
+        self.name = function.__name__
+    def __get__(self, obj, type=None) -> object:
+        obj.__dict__[self.name] = self.function(obj)
         return obj.__dict__[self.name]
 
-class Ctl_Settings:
-    def __init__(self):
-        self._defining_except_found = None
-        self._e2_defining, self._i_define = {"perfect": [], "defect": []}, {"defect": []}
 
-    @property
-    def defining_except_found(self):
+class Ctl_Settings:
+    @NewProperty
+    def defining_except_found(self, bool=None):
         """
             defining_exept_found(bool) : Indication of whether defect subdirectories have been found to be missing
                                          files needed for working out which atoms are related to defect.
         """
-
-        return self._defining_except_found
-
-    @defining_except_found.setter
-    def defining_except_found(self, bool):
-        """
-            bool(bool)                 : To be turned True when a defect subdirectory is found to be missing
-                                         file(s) needed for working out which atoms are related to defect.
-        """
-
-        self._defining_except_found = bool
-
-    @property
-    def e2_defining(self):
+        return bool
+    @NewProperty
+    def e2_defining(self, dict_=None):
         """
             execpt2_defining(dict)     : Record of all subdirectories in which needed files for working out which
                                          atoms are related to defect were missing.
         """
-
-        return self._e2_defining
-
-    @e2_defining.setter
-    def e2_defining(self, dict):
-        """
-            dict(dict)                 : Updated version of dictionary to replace with.
-        """
-
-        self._e2_defining = dict
-
-    @property
-    def i_defining(self):
+        if dict_ is None:
+            dct = {"perfect": [], "defect": []}
+        return dct
+    @NewProperty
+    def i_defining(self, dict_=None):
         """
             Inter_defining(dict)       : Record of subdirectories to have their inital xyz file checked for in other
                                          subdirectories of the same project name and charge state.
         """
-
-        return self._i_define
-
-    @i_defining.setter
-    def i_defining(self, dict):
-        """
-            dict(dict)                 : Updated version of dictionary to replace with.
-        """
-
-        self._i_define = dict
+        if dict_ is None:
+            dct = {"defect": []}
+        return dct
 
 class CaS_Settings:
-
-    def __init__(self):
-        self._nn_and_def, self._cont_bdr = None, None
-        self._bader_missing, self._bader_break, self._dirs_missing_bader = None, None, {"perfect": [], "defect": []}
-        # self._nn_and_def_except_found, self._e2n_a_d, self._i_nad = None, {"perfect": [], "defect": []}, {"defect": []}
-
-    @property
-    def nn_and_def(self):
-        return self._nn_and_def
-
-    @nn_and_def.setter
-    def nn_and_def(self, bool):
-        self._nn_and_def = bool
-
-    @property
-    def cont_bdr(self):
-        return self._cont_bdr
-
-    @cont_bdr.setter
-    def cont_bdr(self, bool):
-        self._cont_bdr = bool
-
-    @property
-    def bader_missing(self):
+    @NewProperty
+    def nn_and_def(self, bool=None):
+        return bool
+    @NewProperty
+    def cont_bdr(self, bool=None):
+        return bool
+    @NewProperty
+    def bader_missing(self, bool=None):
         """
             badermissing(None->True)     : Indication of whether defect subdirectories have been found to be missing
                                            either CP2K output and/or intermediary files needed for bader charge analysis.
         """
-
-        return self._bader_missing
-
-    @bader_missing.setter
-    def bader_missing(self, bool):
-        """
-            bool(bool)                   : To be turned True when a defect subdirectory is found to be missing
-                                           file(s) needed for bader charge analysis of the calculation.
-        """
-
-        self._bader_missing = bool
-
-    @property
-    def bader_break(self):
+        return bool
+    @NewProperty
+    def bader_break(self, bool=None):
         """
             BaderBreak(None->True)       : Indication of whether bader charge analysis can be performed.
         """
-
-        return self._bader_break
-
-    @bader_break.setter
-    def bader_break(self, bool):
-        """
-            bool(bool)                   : To be turned True when both CP2K output and intermediary file(s) needed for
-                                           bader analysis are not found in the defect-free perfect directory.
-        """
-
-        self._bader_break = bool
-
-    @property
-    def dirs_missing_bader(self):
+        return bool
+    @NewProperty
+    def dirs_missing_bader(self, dict_=None):
         """
             dirsmissingbader(dict)       : Record of all subdirectories in which needed files for bader analysis
                                            were missing. {type: [[name, run, charge, shortened path],...], type:[...] }.
         """
-
-        return self._dirs_missing_bader
-
-    @dirs_missing_bader.setter
-    def dirs_missing_bader(self, dict):
-        """
-            dict(dict)                   : Updated version of dictionary to replace with.
-        """
-
-        self._dirs_missing_bader = dict
+        if dict_ is None:
+            dct = {"perfect": [], "defect": []}
+        return dct
 
 class End:
     def __init__(self):
         self._triggered = None
-
     @property
     def triggered(self):
         return self._triggered
-
     @triggered.setter
     def triggered(self, bool):
         self._triggered = bool
@@ -321,48 +288,31 @@ class Dirs:
     """
         All class properties needed for searching for specific files needed for particular result processing methods.
     """
-    def __init__(self):
-        self._address_book, self._dir_calc_keys = {"perfect": dict(), "defect": dict()}, {"perfect": [], "defect": []}
-        self._executables_address =  None
-    @property
-    def address_book(self):
+    @NewProperty
+    def address_book(self, dict_=None):
         """
             address_book(dict)           : Dictionary of os.path strs perfect and defect directory paths, and
                                            os.path strs to CP2K output and intermediary files in these directories.
         """
-        return self._address_book
-    @address_book.setter
-    def address_book(self, dict):
-        """
-            dict(dict)                   : Updated version of dictionary to replace with
-        """
-        self._address_book = dict
-    @property
-    def dir_calc_keys(self):
+        if dict_ is None:
+            dct = {"perfect": dict(), "defect": dict()}
+        return dct
+    @NewProperty
+    def dir_calc_keys(self, dict_=None):
         """
             dir_calc_keys(dict)          : Dictionary of lists of nested dictionary keys specific to each
                                            specific nested dictionary entry within the Address_book dictionary.
         """
-        return self._dir_calc_keys
-    @dir_calc_keys.setter
-    def dir_calc_keys(self, dict):
-        """
-            dict(dict)                   : Updated version of dictionary to replace with.
-        """
-        self._dir_calc_keys = dict
-    @property
-    def executables_address(self):
+        if dict_ is None:
+            dct = {"perfect": [], "defect": []}
+        return dct
+    @NewProperty
+    def executables_address(self, string=None):
         """
             executables_address(os.path) : File path for 'Executables' directory in the CASORP package for execution
                                            of unix executable files needed for results processing method completion.
         """
-        return self._executables_address
-    @executables_address.setter
-    def executables_address(self, string):
-        """
-             string(str)                 : File path of directory holding all unix executable files used by CASORP
-        """
-        self._executables_address = string
+        return string
 
 class Geo_Settings:
     """
@@ -377,42 +327,26 @@ class Geo_Settings:
                         }, {name2 : ,,,}, ...
             }, {defect: ...}
     """
-    def __init__(self):
-        self._structural_data = {"perfect": dict(), "defect": dict()}
-        self._perf_Lxyz = ''
-    @property
-    def struc_data(self):
-        return self._structural_data
-    @struc_data.setter
-    def struc_data(self, dict):
-        self._structural_data = dict
-    @property
-    def perf_lxyz(self):
-        return self._perf_Lxyz
-    @perf_lxyz.setter
-    def perf_lxyz(self, str):
-        self._perf_Lxyz = str
+    @NewProperty
+    def struc_data(self, dict_=None):
+        if dict_ is None:
+            dct = {"perfect": dict(), "defect": dict()}
+        return dct
+    @NewProperty
+    def perf_lxyz(self, string=None):
+        return string
 
 class ProcessCntrls:
     """
         Saving the results processing options given by user in commandline input.
     """
-    def __init__(self):
-        self._processwants, self._setup, self._processresults = None, None, {"perfect": dict(), "defect": dict()}
-    @property
-    def processwants(self):
+    @NewProperty
+    def processwants(self, list_=None):
         """
             ProcessWants(None -> list) : Saved list of result processing
                                          methods wanted by user.
         """
-        return self._processwants
-    @processwants.setter
-    def processwants(self, list):
-        """
-            list(list)                 : List of result processing options given by user in
-                                         commandline input.
-        """
-        self._processwants = list
+        return list_ #self._processwants
     @property
     def setup(self):
         """
@@ -420,73 +354,15 @@ class ProcessCntrls:
                                          of inner nested dictionary of ProcessResults.
         """
         return [f"results for {item}" for item in self.processwants]
-    @property
-    def processresults(self):
+    @NewProperty
+    def processresults(self, dict_=None):
         """
             processresults(dict)       : Dictionary of fully calculated result products from each defect
                                          subdirectory for each result processing method wanted by user.
         """
-        return self._processresults
-    @processresults.setter
-    def processresults(self, dict):
-        """
-            dict(dict)                 : Updated version of dictionary to replace with
-        """
-        self._processresults = dict
-
-# class Pool_Args:
-#     CaSGeoRecver, CaSGeoSender = None, None
-#     def __init__(self):
-#         self._CaSGeoRecver = None
-#         self._CaSGeoSender = None
-#     @classmethod
-#     def CaSGeoPipe(cls, pipe):
-#         print(pipe)
-#         self = cls()
-#         self._CaSGeoRecver = pipe[0]
-#         self._CaSGeoSender = pipe[1]
-#         self.attributes_set(pipe[0], pipe[1])
-#     @classmethod
-#     def attributes_set(cls, value1, value2):
-#         Pool_Args.CaSGeoRecver = value1
-#         Pool_Args.CaSGeoSender = value2
-#     @NewProperty
-#     def CaSGeoRecver_(self):
-#         return self._CaSGeoRecver
-#     @NewProperty
-#     def CaSGeoSender_(self):
-#         return self._CaSGeoSender
-
-class SaveProperties:
-    """
-        Saving file path of file and the corresponding specific dictionary of the variable to be extracted.
-    """
-    def __init__(self):
-        self._os_path, self._varitem = "", {}
-    @property
-    def os_path(self):
-        """
-            os_path(os.path) : Saved full directory path to file variable to be extracted from.
-        """
-        return self._os_path
-    @os_path.setter
-    def os_path(self, str):
-        """
-            str(str)         : Name of file variable to be extracted from.
-        """
-        self._os_path = str
-    @property
-    def varitem(self):
-        """
-            varitem(dict)    : Specific variable nested var_fo dictionary for file type being searched.
-        """
-        return self._varitem
-    @varitem.setter
-    def varitem(self, dict):
-        """
-            dict(dict)       : Updated version of dictionary to replace with
-        """
-        self._varitem = dict
+        if dict_ is None:
+            dct = {"perfect": dict(), "defect": dict()}
+        return dct
 
 class SharableDicts:
     def __init__(self):
@@ -509,94 +385,53 @@ class UArg:
     """
         Saving commandline arguments from user upon execution of MAIN.py as class definitions.
     """
-    def __init__(self):
-        self._cwd, self._perfd, self._defd, self._cptd, self._subd, self._fdsd= '', '', '', '', [], {}
-        self._expt, self._only = False, False
-    @property
-    def cwd(self):
+    @NewProperty
+    def cwd(self, string=''):
         """
 
         """
-        return self._cwd
-    @cwd.setter
-    def cwd(self, string):
-        """
-            string(str)       : Name of sudo current working directory.
-        """
-        self._cwd = string
-    @property
-    def perfd(self):
+        return string
+    @NewProperty
+    def perfd(self, string = ''):
         """
             perfd(os.path)    : Saved full directory path to directory user named as the
                                 directory of CP2K output files for the perfect structure.
         """
-        return self._perfd
-    @perfd.setter
-    def perfd(self, string):
-        """
-            string(str)       : Name of directory containing CP2K output files for the perfect
-                                defect-free material structure given by user.
-        """
-        self._perfd = string
-    @property
-    def defd(self):
+        return string
+    @NewProperty
+    def defd(self, string = ''):
         """
             defd(os.path)     : Saved full directory path to directory user named as the parent
                                 directory of particular type of defect studied within material.
         """
-        return self._defd
-    @defd.setter
-    def defd(self, string):
-        """
-            string(str)       : Name of parent directory of particular  type of defect studied
-                                within material given by user.
-        """
-        self._defd = string
-    @property
-    def cptd(self):
+        return string
+    @NewProperty
+    def cptd(self, string= ''):
         """
             cptd(os.path)     : Saved full directory path to directory user named as the parent
                                 directory for individual calc reference chem pots.
         """
-        return self._cptd
-    @cptd.setter
-    def cptd(self, string):
-        """
-            string(str)       : Name of parent directory of subdirectories for individual calc
-                                reference chem pots for host and/or impurity elements in material.
-        """
-        self._cptd = string
-    @property
-    def subd(self):
+        return string
+    @NewProperty
+    def subd(self, list_=None):
         """
             subd(list)        : Saved list of subdirectory names given by user at the end of the
                                 commandline arguments after keyword only or except.
         """
-        return self._subd
-    @subd.setter
-    def subd(self, list):
-        """
-            list(list)        : List of subdirectory names user wants to be excluded from data processing.
-        """
-        self._subd = list
-    @property
-    def fdsd(self):
+        if list_ is None:
+            list_ = []
+        return list_
+    @NewProperty
+    def fdsd(self, dict_=None):
         """
             fdsd(dict)        : Dictionary populated if 'only' given for commandline args[4]. Key of each
                                 named subdirectory in args[5:] with value False until found in dir tree.
         """
-        if self._fdsd == {}:
+        if dict_ is None:
+            dict_ = {}
             for sub in self.subd:
-                self._fdsd[str(sub)] = False
-        else:
-            self._fdsd = self._fdsd
-        return self._fdsd
-    @fdsd.setter
-    def fdsd(self, dict):
-        """
-            dict(dict)        : Updated version of dictionary to replace with.
-        """
-        self._fdsd = dict
+                dict_[str(sub)] = False
+        return dict_
     @property
     def expt(self):
         """
@@ -604,89 +439,46 @@ class UArg:
                                 in commandline arguments to be included in the data processing.
         """
         return True if self.subd != [] and self.only is False else False
-    @property
-    def only(self):
+    @NewProperty
+    def only(self, YorN=False):
         """
             only(boolean)     : True if user wants only data processing of data within subdirectories
                                 stated after in command line argument.
         """
-        return self._only
-    @only.setter
-    def only(self, YorN):
-        """
-            list(list)        : List of subdirectory names user only wants to be data processed.
-        """
-        self._only = YorN
+        return YorN
 
 class Userwants:
     """
         Saving commandline inputs given by user related to their analysis and display needs.
     """
-
     def __init__(self):
         self._analysiswants, self._displaywants, self._append, self._overwrite = None, None, None, None
-
-    @property
-    def analysiswants(self):
+    @NewProperty
+    def analysiswants(self, YorN=None):
         """
             analysiswants(None -> boolean) : True if user responds 'Y' to question 2 and wants results analysis.
         """
-
-        return self._analysiswants
-
-    @analysiswants.setter
-    def analysiswants(self, YorN):
-        """
-            YorN(str)                      : String of either 'Y' or 'N' corresponding to whether user
-                                             wants analysis to be performed.
-        """
-
-        self._analysiswants = YorN
-
-    @property
-    def displaywants(self):
+        return YorN
+    @NewProperty
+    def displaywants(self, YorN=None):
         """
             displaywants(None -> boolean)  : True if user responds 'Y' to Follow-up question 1 and wants
                                              to display results via GUI.
         """
-
-        return self._displaywants
-
-    @displaywants.setter
-    def displaywants(self, YorN):
-        """
-            YorN(str)                      : String of either 'Y' or 'N' corresponding to whether user
-                                             wants results to be displayed in a GUI window.
-        """
-
-        self._displaywants = YorN
-
+        return YorN
     @property
     def append(self):
         """
             overwrite(None -> boolean)     : True if user responds 'Y' to Follow-up question 2.
         """
-
         return [item for key, item in boolconvtr.items() if item is not self.overwrite][0] if self.overwrite is not \
                                                                                               None else None
-
-    @property
-    def overwrite(self):
+    @NewProperty
+    def overwrite(self, YorN=None):
         """
             append(None -> boolean)        : True if user responds 'N' to Follow-up question 2.
         """
-
-        return self._overwrite
-
-    @overwrite.setter
-    def overwrite(self, YorN):
-        """
-            yes(str)                       : String of either 'Y' or 'N' corresponding to whether user
-                                             wants to append to the file processed_data.txt.
-        """
-
-        self._overwrite = YorN
-
+        return YorN
 
 
 
