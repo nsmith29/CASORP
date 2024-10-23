@@ -575,10 +575,6 @@ def checkinput(func):
                 if isinstance(A, list) == True:
                     if len([a for a in A if a not in ans]) != 0:
                         raise ValueError
-                    Acopy = A.copy()
-                    _ = Pool_Args_check(Acopy).Return()
-                    if _ != A:
-                        A = (_, A)
                 else:
                     if A not in ans:
                         raise ValueError
@@ -587,6 +583,11 @@ def checkinput(func):
                 eval("ErrMessages.ValueError{}()".format(typ))
                 A = ask_question(Q, typ, ans)
             break
+        if isinstance(A, list) == True:
+            Acopy = A.copy()
+            _ = Pool_Args_check(Acopy).Return()
+            if _ != A:
+                A = (_, A)
         return A
     return wrapper
 

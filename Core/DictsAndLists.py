@@ -11,7 +11,7 @@ options = ("band structure", "charges and spins", "charge transition levels", "g
 multiplefiles4extension = [".txt", ".png", "1-1_l.cube", "2-1_l.cube", ".wfn", ".dat", ".pdos", ".log", '-L.xyz']
 
 ## DICTIONARIES
-args4pool = {"'charges and spins' and 'geometry' in list": "create_pipe"}
+args4pool = {"'charges and spins' in list and 'geometry' in list": "create_pipe"}
 
 argv_dict = {"1": "{bcolors.ITALIC}the name of the {bcolors.KEYINFO}{bcolors.BOLD}directory{bcolors.ENDC}"
                   "{bcolors.ITALIC}{bcolors.INFO} of CP2K output files for the {bcolors.KEYINFO}{bcolors.BOLD}"
