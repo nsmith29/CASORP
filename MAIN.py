@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
 """
-    run: ./MAIN.py bulk_structure test_combined chem_pot only O_Cc1Al_Sic1
+    run: ./MAIN.py perf_bulk_directory parent_defect_directory chemical_potentials_directory keyword [optional]
+    keyword: all/only/except
+    [optional]: name(s)_of_defect_subdirectories
+
+    Must be run individually per specific material system.
 """
 
 import multiprocessing as mp
