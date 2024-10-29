@@ -12,13 +12,13 @@ __all__ = {'find_a', 'find_at', 'find_charge', 'find_energy', 'find_gap', 'find_
 
 async def find_a(line, index, lines):
     strg1 = line
-    strg2 = lines[index]
-    strg3 = lines[index - 1]
+    strg2 = lines[index - 1]
+    strg3 = lines[index - 2]
     collect = []
     for s, item, letter in zip([1, 2, 3], ['a', 'b', 'c'], ['A', 'B', 'C']):
         # extract txt of indices 4,5,6,9 in line split list. {letter} is lat cnst, {item}Latt is {item} line of lat vec.
         exec(f'*{letter}, {item}Latt= [float(var[1]) for var in enumerate(strg{s}.split()) if var[0] in [4,5,6,9]]')
-        exec(f'collect.extend([{letter}, {item}Latt])')
+        exec(f'collect.append([{letter}, {item}Latt])')
     await asyncio.sleep(0.01)
     return collect
 

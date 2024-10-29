@@ -22,7 +22,7 @@ class async_pairing_iterator():
         self.counter +=1
         return await self.func(self.filepaths[self.counter], 'log', 'original'), ["path", "log"], [self.dirpaths[self.counter], self.filepaths[self.counter]] #Entry4FromFiles
 
-class GetDirs_iterator():
+class getDirs_iterator():
     def __init__(self, cat):
         self.cat = cat
         self.counter = -1
@@ -70,16 +70,26 @@ class Lines_iterator():
         self.lns = [ln for ln in reversed(lines)]
         self.lcounter = -1
         self.counter = 0
-
     def __aiter__(self):
         return self
-
     async def __anext__(self):
         if self.counter <= -len(self.lines):
             raise StopAsyncIteration
         self.counter -= 1
         self.lcounter += 1
         return [self.counter, self.lns[self.lcounter]]
+
+class standard_iterator():
+    def __init__(self, num):
+        self.num = num
+        self.counter = -1
+    def __aiter__(self):
+        return self
+    async def __anext__(self):
+        if self.counter >= self.num - 1:
+            raise StopAsyncIteration
+        self.counter +=1
+        return self.counter
 
 class toFromFiles_iterator():
     """

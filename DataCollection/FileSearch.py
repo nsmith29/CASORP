@@ -9,7 +9,7 @@ import subprocess
 from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg, add2addressbook
 from Core.DictsAndLists import  files4res, finding_conditions, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
-from Core.Iterables import async_pairing_iterator, toFromFiles_iterator, GetDirs_iterator, FileExt_iterator
+from Core.Iterables import async_pairing_iterator, toFromFiles_iterator, getDirs_iterator, FileExt_iterator
 from Core.Messages import ErrMessages, Global_lock
 from DataCollection.FromFile import iterate
 
@@ -200,7 +200,7 @@ def CatalogueFinding(func):
         else:
             cats = {type_: [entry for entry in Dirs().dir_calc_keys[type_] if eval(restrictions[self2.keywrd])]}
         book, errflaggd, Q = Dirs().address_book.copy(), fl_exts, asyncio.Queue()
-        async for item_ in GetDirs_iterator(cats[type_]):
+        async for item_ in getDirs_iterator(cats[type_]):
             n, r, c, keylst = item_[0], item_[1], item_[2], [type_, item_[0], item_[1], item_[2]]
             Ars = [value for key, value in kwargs.items() if key == 'exchange'] if kwargs else []
             path, keys, flexts = book[type_][n][r][c]["path"], book[type_][n][r][c].keys(), []

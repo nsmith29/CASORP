@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__all__ = {'args4pool', 'argv_dict', 'boolconvtr', 'defect_type', 'files4res', 'finding_conditions',
+__all__ = {'args4pool', 'argv_dict', 'boolconvtr', 'files4res', 'finding_conditions',
            'functions', 'inp_var_fo', 'inp_want', 'log_var_fo', 'log_want', 'multiplefiles4extension', 'optdict',
            'options', 'questions'}
 
@@ -29,11 +29,6 @@ argv_dict = {"1": "{bcolors.ITALIC}the name of the {bcolors.KEYINFO}{bcolors.BOL
              }
 
 boolconvtr = {'Y': True, 'N': False}
-
-defect_type = {'substitution': "finding_substitutional",
-               'vacancy': "finding_vacancy",
-               'interstitial': "finding_interstitial"
-               }
 
 files4res ={"band structure":{
                          "cp2k_outputs":{"defect":[".log"                   # To determine CP2K version of calc
@@ -246,7 +241,9 @@ questions = {"MQ1": str("\n{bcolors.QUESTION}Which results types would you like 
                         "{bcolors.METHOD}Mulliken and Hirshfeld analysis {bcolors.EXTRA}will still be performed for all"
                         " found subdirectories. Selecting {bcolors.OPTIONS}'Y'{bcolors.EXTRA} will result in extra "
                         "datatable columns of {bcolors.METHOD}Bader analysis {bcolors.EXTRA}data for calculations which "
-                        "{bcolors.METHOD}Bader analysis {bcolors.EXTRA}can be \nperformed for:"
+                        "{bcolors.METHOD}Bader analysis {bcolors.EXTRA}can be \nperformed for:",
+             "GeoQ1":   "\n{bcolors.QUESTION}Is the material system being studied an ionic system, with bonding between "
+                        "cations and anions in the structure?({bcolors.OPTIONS}Y/N{bcolors.QUESTION})"
              }
 
 restrictions = {"geometry": "'ENERGY' not in entry"}

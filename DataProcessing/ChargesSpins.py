@@ -13,7 +13,7 @@ from Core.DictsAndLists import boolconvtr
 from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLines
 from DataCollection.FileSearch import  MethodFiles, Entry4FromFiles
 from DataProcessing.ProcessCntral import Files4DefiningDefect
-# from DataAnalysis.ChargeAnalysis import retrieval
+
 
 
 __all__ = {'CntrlChrgSpns', 'BaderProcessing', 'retrieval', 'OnlyProcessing', 'ThreadOne', 'ThreadTwo'}
@@ -104,6 +104,10 @@ async def OnlyProcessing(recver):
             Redistribute(key)
         if recver:
             print('this works, recver =', recver, '[DC.CS L106]')
+        while True:
+            item = recver.recv()
+            print(item)
+            break
     else:
         await Files4DefiningDefect.setoffassessment("charges and spins", "only")
 

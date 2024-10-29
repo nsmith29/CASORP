@@ -79,7 +79,7 @@ class Delay_Print:
                             sys.stdout.flush()
                             count = 0
             else:
-                print('queue called and item given [C.M L81]')
+                # print('queue called and item given [C.M L81]')
                 sys.exit(0)
         else:
             with lock:

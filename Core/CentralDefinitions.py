@@ -8,10 +8,10 @@ import sys
 from shared_memory_dict import SharedMemoryDict
 import Core
 from Core.DictsAndLists import boolconvtr, args4pool
-from Core.Iterables import GetDirs_iterator
+from Core.Iterables import getDirs_iterator
 
 __all__ = {'add2addressbook', 'CaS_Settings', 'create_nested_dict', 'CreateSharableDicts', 'Ctl_Settings', 'Dirs',
-           'End', 'End_Error', 'Geo_Settings', 'GetDirs', 'proxyfunction', 'ProcessCntrls', 'Redistribute',
+           'End', 'End_Error', 'Geo_Settings', 'GetDirs', 'proxyfunction', 'proxy4keys', 'ProcessCntrls', 'Redistribute',
            'ResultsUpdate', 'SharableDicts', 'sharable_vars', 'TESTING', 'savekeys', 'UArg',
            'Userwants'}
 
@@ -139,10 +139,17 @@ def GetDirs(func):
 
 def percalcdir(func):
     async def wrapper(type_, **kwargs):
-        async for item_ in GetDirs_iterator(Dirs().dir_calc_keys[type_]):
+        async for item_ in getDirs_iterator(Dirs().dir_calc_keys[type_]):
             n, r, c = item_[0], item_[1], item_[2]
-            await func(type_, n, r, c, **kwargs)
+            if 'retrn' in kwargs.keys():
+                return await func(type_, n, r, c)
+            else:
+                await func(type_, n, r, c, **kwargs)
     return wrapper
+
+@percalcdir
+async def proxy4keys( t_, n, r, c):
+    return [t_, n, r, c]
 
 # classes
 
@@ -245,11 +252,11 @@ class Ctl_Settings:
 
 class CaS_Settings:
     @NewProperty
-    def nn_and_def(self, bool=None):
-        return bool
+    def nn_and_def(self, YorN=None):
+        return YorN
     @NewProperty
-    def cont_bdr(self, bool=None):
-        return bool
+    def cont_bdr(self, YorN=None):
+        return YorN
     @NewProperty
     def bader_missing(self, bool=None):
         """
@@ -327,13 +334,21 @@ class Geo_Settings:
             }, {defect: ...}
     """
     @NewProperty
+    def perf_lxyz(self, string=None):
+        return string
+    @NewProperty
     def struc_data(self, dict_=None):
         if dict_ is None:
             dct = {"perfect": dict(), "defect": dict()}
         return dct
     @NewProperty
-    def perf_lxyz(self, string=None):
-        return string
+    def checkdefatnum(self, bool=None):
+        return bool
+    @NewProperty
+    def question_def_sites(self, list_:list=None) -> list:
+        if list_ is None:
+            list_ = []
+        return list_
 
 class ProcessCntrls:
     """
