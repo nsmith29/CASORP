@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
-from Core.CentralDefinitions import Dirs,  UArg, Ctl_Settings, proxyfunction, add2addressbook, Geo_Settings, create_nested_dict
+import time
+from Core.CentralDefinitions import Dirs,  UArg, Ctl_Settings, proxyfunction, add2addressbook, Geo_Settings, \
+    create_nested_dict, DictProperty
 from Core.Iterables import keylist_iterator
 from DataCollection.FileSearch import MethodFiles, Entry4FromFiles
+from Core.Messages import SlowMessageLines
 
 
 __all__ = {'Files4DefiningDefect'}
@@ -33,7 +36,8 @@ class Files4DefiningDefect(MethodFiles):
             flpath.pop(-1)
         Dirs.address_book = add2addressbook(k, [paths], [flpath], Dirs().address_book)
         if et == '.inp':
-            xyzname = await Entry4FromFiles(flpath[0], 'inp', self2.keywrd) if type(flpath) == list else await Entry4FromFiles(flpath, 'inp', self2.keywrd)
+            xyzname = await Entry4FromFiles(flpath[0], 'inp', self2.keywrd) if type(flpath) == list else \
+                await Entry4FromFiles(flpath, 'inp', self2.keywrd)
             await Q.put([False, xyzname])
         else:
             # check if same initial xyz file not found for any diff charge state dirs of same name & runtype when checked
@@ -63,8 +67,7 @@ class Files4DefiningDefect(MethodFiles):
         # [missing files]' dict
         l_dir_in_path = '/'.join([dir for dir in str(Dirs().address_book[k[0]][k[1]][k[2]][k[3]]["path"]).split('/') if
                                   dir not in str(UArg().cwd).split('/')])
-        k.append(l_dir_in_path)
-        _, Ctl_Settings.e2_defining = proxyfunction(k, None, None, None, Ctl_Settings().e2_defining)
+        Ctl_Settings.e2_defining = AppendDefDict('Ctl_Settings', 'e2_defining')(k, l_dir_in_path)
         await asyncio.sleep(0.01)
         # check for diff c dirs w/ same n & r have ''.xyz filepath same as e already found. If so, remove k from
         # 'analysis can't be done [missing files]' dict & add ''.xyz of diff c w/ same n & r to k's addressbook w/ *.
@@ -92,3 +95,25 @@ class Files4DefiningDefect(MethodFiles):
                                                         Geo_Settings().struc_data)
         else:
             Geo_Settings.struc_data = add2addressbook(k, [self2.flexts_[1][1]], [{'nns': [], 'bonds': []}], Geo_Settings().struc_data)
+
+
+class AppendDefDict(DictProperty):
+    def __init__(self, klass, method, ):
+        super().__init__(klass, method)
+    def __call__(self, k, extra):
+        k.append(extra)
+        _, rtn = proxyfunction(k, None, None, None, self)
+        self['defect'] = rtn['defect']
+        return self
+    def __str__(self):
+        SlowMessageLines("\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2]{bcolors.ENDC}{bcolors.FAIL} Needed "
+                         "{bcolors.KEYVAR}'"
+                         + f"{self['filetypes']}"
+                         + "'{bcolors.ENDC}{bcolors.FAIL} file(s) for {bcolors.METHOD}"
+                         + f"{self['method']}"
+                         + "{bcolors.ENDC}{bcolors.FAIL} could not be found within the "
+                           "following directories for:")
+        time.sleep(0.5)
+        for value in self['defect']:
+            SlowMessageLines("{bcolors.KEYVAR}- " + f"{value[-1]} " + "{bcolors.ENDC}")
+        return " "

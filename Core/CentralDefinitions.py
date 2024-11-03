@@ -46,7 +46,8 @@ def savekeys(func):
             assert keys[0] in d2.keys(), "First str item in keys must be a key within d2"
             if not d2[keys[0]]:
                 d2[keys[0]] = [keys[1:]]
-            elif len(keys) == 4 and [keys[1], keys[2], keys[3]] not in d2[keys[0]] or len(keys) == 5 and [keys[1], keys[2], keys[3], keys[4]] not in d2[keys[0]]:
+            elif len(keys) == 4 and [keys[1], keys[2], keys[3]] not in d2[keys[0]] or len(keys) == 5 and \
+                    [keys[1], keys[2], keys[3], keys[4]] not in d2[keys[0]]:
                 inner = sort_charges([item for item in d2[keys[0]] if keys[1] in item and keys[2] in item])
                 if len(inner) > 0:
                     indx = sorted([d2[keys[0]].index(item) for item in inner])
@@ -182,11 +183,6 @@ class Pool_Args_check:
                 self.list = eval("self.{}(list)".format(func))
         if self.list == []:
             self.list = list
-    def create_pipe(self, list_):
-        con1, con2 = mp.Pipe()
-        list_[list_.index("charges and spins")] = ("charges and spins", con1)
-        list_[list_.index("geometry")] = ("geometry", con2)
-        return list_
     def Return(self):
         return self.list
 
@@ -222,6 +218,10 @@ class NewProperty(object):
         obj.__dict__[self.name] = self.function(obj)
         return obj.__dict__[self.name]
 
+class DictProperty(dict):
+    def __init__(self, klass, method):
+        dict4kwargs = eval("{}().{}".format(klass, method))
+        super().__init__(dict4kwargs)
 
 class Ctl_Settings:
     @NewProperty
@@ -238,7 +238,9 @@ class Ctl_Settings:
                                          atoms are related to defect were missing.
         """
         if dict_ is None:
-            dct = {"perfect": [], "defect": []}
+            dct = {"filetypes": ".inp and ''.xyz",
+                   "method": "charges and spins analysis of only defect-related atoms",
+                  "defect": []}
         return dct
     @NewProperty
     def i_defining(self, dict_=None):
@@ -277,7 +279,9 @@ class CaS_Settings:
                                            were missing. {type: [[name, run, charge, shortened path],...], type:[...] }.
         """
         if dict_ is None:
-            dct = {"perfect": [], "defect": []}
+            dct = {"filetypes": "-ELECTRON_DENSITY-1_0.cube",
+                   "method": "analysis of Bader charges of atoms",
+                  "defect": []}
         return dct
 
 class End:
@@ -313,12 +317,12 @@ class Dirs:
             dct = {"perfect": [], "defect": []}
         return dct
     @NewProperty
-    def executables_address(self, string=None):
+    def executables_address(self, str ="") -> str:
         """
             executables_address(os.path) : File path for 'Executables' directory in the CASORP package for execution
                                            of unix executable files needed for results processing method completion.
         """
-        return string
+        return str
 
 class Geo_Settings:
     """
@@ -345,10 +349,10 @@ class Geo_Settings:
     def checkdefatnum(self, bool=None):
         return bool
     @NewProperty
-    def question_def_sites(self, list_:list=None) -> list:
-        if list_ is None:
-            list_ = []
-        return list_
+    def question_def_sites(self, dict_: dict = None) -> dict:
+        if dict_ is None:
+            dct_ = {}
+        return dct_
 
 class ProcessCntrls:
     """
@@ -360,7 +364,7 @@ class ProcessCntrls:
             ProcessWants(None -> list) : Saved list of result processing
                                          methods wanted by user.
         """
-        return list_ #self._processwants
+        return list_
     @property
     def setup(self):
         """

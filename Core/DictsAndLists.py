@@ -242,8 +242,8 @@ questions = {"MQ1": str("\n{bcolors.QUESTION}Which results types would you like 
                         " found subdirectories. Selecting {bcolors.OPTIONS}'Y'{bcolors.EXTRA} will result in extra "
                         "datatable columns of {bcolors.METHOD}Bader analysis {bcolors.EXTRA}data for calculations which "
                         "{bcolors.METHOD}Bader analysis {bcolors.EXTRA}can be \nperformed for:",
-             "GeoQ1":   "\n{bcolors.QUESTION}Is the material system being studied an ionic system, with bonding between "
-                        "cations and anions in the structure?({bcolors.OPTIONS}Y/N{bcolors.QUESTION})"
+             "GeoQ1":   "\n{bcolors.QUESTION}Is this the number of defect sites expected to be present within the above"
+                        " structures?({bcolors.OPTIONS}Y/N{bcolors.QUESTION})"
              }
 
 restrictions = {"geometry": "'ENERGY' not in entry"}

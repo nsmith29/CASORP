@@ -12,25 +12,22 @@ from Core.CentralDefinitions import CaS_Settings, Ctl_Settings, Dirs, proxyfunct
 from Core.DictsAndLists import boolconvtr
 from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLines
 from DataCollection.FileSearch import  MethodFiles, Entry4FromFiles
-from DataProcessing.ProcessCntral import Files4DefiningDefect
+from DataProcessing.ProcessCntral import Files4DefiningDefect, AppendDefDict
 
 
 
-__all__ = {'CntrlChrgSpns', 'BaderProcessing', 'retrieval', 'OnlyProcessing', 'ThreadOne', 'ThreadTwo'}
+__all__ = {'CntrlChrgSpns', 'ThreadOne', 'ThreadTwo', 'BaderProcessing', 'OnlyProcessing', 'retrieval'}
 
 
-async def CntrlChrgSpns(recver=None):
-    # Main Asyncio task - set up subtasks
-    if recver != None:
-        print('recver received', recver, '[DC.CS L25]')
+async def CntrlChrgSpns():
     text = str("\n                                      {bcolors.METHOD}{bcolors.UNDERLINE}CHARGE AND SPIN DATA "
                "PROCESSING{bcolors.ENDC}{bcolors.METHOD}...")
     SlowMessageLines(text)
     event = asyncio.Event()
-    coroutines = [ThreadOne(event, recver), ThreadTwo(event)]
+    coroutines = [ThreadOne(event), ThreadTwo(event)]
     tasks = await asyncio.gather(*coroutines)
 
-async def ThreadOne(e1, recver):
+async def ThreadOne(e1):
     result = await  sync_to_async(ask_question)("CaSQ1", "YorN", ['Y', 'N'])
     CaS_Settings.nn_and_def = boolconvtr[result]
     e1.set()
@@ -39,34 +36,31 @@ async def ThreadOne(e1, recver):
     await asyncio.sleep(0.2)
     if CaS_Settings().bader_missing is True:
         if CaS_Settings().nn_and_def is True:
-            await OnlyProcessing(recver)
+            # start a thread branch offshot with recver to start
+            await OnlyProcessing()
             await e1.wait()
             if Ctl_Settings().defining_except_found is True:
-                ErrMessages.CaS_FileNotFoundError(Ctl_Settings().e2_defining['defect'], ".inp and ''.xyz",
-                                                  "charges and spins "
-                                                  "analysis of only defect-related atoms")
+                print(str(Ctl_Settings().e2_defining))
         else:
+            # wait for answer to whether there is errors from BaderProcessing
             await e1.wait()
+            await percalcdir(retrieval)('defect')
     else:
         await percalcdir(retrieval)('defect')
     return
-    # 1. Ask question CaSQ1
-    # 2. if True, OnlyProcessing; if False, wait for answer to whether there is errors from BaderProcessing
 
 async def ThreadTwo(e1):
     await BaderProcessing().setoffassessment()
     await e1.wait()
     if CaS_Settings().bader_missing is True:
         await asyncio.sleep(0.2)
-        ErrMessages.CaS_FileNotFoundError(CaS_Settings().dirs_missing_bader['defect'], "-ELECTRON_DENSITY-1_0.cube",
-                                              "analysis of Bader charges of atoms")
-        result = await sync_to_async(ask_question)("CaSQ2", "YorN", ["Y", "N"])
-        CaS_Settings.cont_bdr = boolconvtr[result]
+        print(str(CaS_Settings().dirs_missing_bader))
         e1.set()
         for calclist in CaS_Settings().dirs_missing_bader['defect']:
             _ = calclist.pop(3)
     await asyncio.sleep(0.5)
     await percalcdir(retrieval)('perfect')
+    # if Ctl_Settings().defining_except_found is True, start retrieval for defect subdirectories in e2_defining.
     return
 
 class BaderProcessing(MethodFiles):
@@ -92,22 +86,24 @@ class BaderProcessing(MethodFiles):
             sys.exit(0)
         except FileNotFoundError:
             CaS_Settings.bader_missing = True
-            dp = '/'.join([d for d in str(Dirs().address_book[kl[0]][kl[1]][kl[2]][kl[3]]["path"]).split('/') if d not in str(UArg().cwd).split('/')])
-            kl.append(dp)
-            _, CaS_Settings.dirs_missing_bader = proxyfunction(kl, None, None, None, CaS_Settings().dirs_missing_bader)
+            dp = '/'.join([d for d in str(Dirs().address_book[kl[0]][kl[1]][kl[2]][kl[3]]["path"]).split('/')
+                           if d not in str(UArg().cwd).split('/')])
+            CaS_Settings.dirs_missing_bader = AppendBader('CaS_Settings', 'dirs_missing_bader')(kl, dp)
+            # kl.append(dp)
+            # _, CaS_Settings.dirs_missing_bader = proxyfunction(kl, None, None, None, CaS_Settings().dirs_missing_bader)
 
-async def OnlyProcessing(recver):
+class AppendBader(AppendDefDict):
+    def __init__(self, klass, method):
+        super().__init__(klass, method)
+    def __str__(self):
+        super().__str__()
+        CaS_Settings.cont_bdr = boolconvtr[ask_question("CaSQ2", "YorN", ["Y", "N"])]
+
+async def OnlyProcessing():
     if 'geometry' in ProcessCntrls().processwants:
-        print("geometry should have worked this out already [DC.CS L104]")
         for name in ['defining_except_found', 'e2_defining', 'i_defining']:
             key = str('Ctl_Settings.' + name)
             Redistribute(key)
-        if recver:
-            print('this works, recver =', recver, '[DC.CS L106]')
-        while True:
-            item = recver.recv()
-            print(item)
-            break
     else:
         await Files4DefiningDefect.setoffassessment("charges and spins", "only")
 

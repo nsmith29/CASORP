@@ -347,7 +347,7 @@ class ErrMessages:
                    "press {bcolors.OPTIONS}Y{bcolors.ACTION}.")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         SlowMessageLines(text)
-    @staticmethod
+    @staticmethod #√
     def Main_TypeError(err, lock):
         """
             Inputs:
@@ -360,7 +360,7 @@ class ErrMessages:
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE}"+f"{err}"+"{bcolors.ENDC}")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         SlowMessageLines(text)
-    @staticmethod
+    @staticmethod #√
     def FileSearch_LookupError(extension, subdirectory, method=None):
         dirpath = '/'.join([directory for directory in str(subdirectory).split('/') if directory not in
                             str(UArg.cwd).split('/')])
@@ -384,7 +384,7 @@ class ErrMessages:
                        + f"{method}"
                        + "PROCESSING{bcolors.ENDC}{bcolors.METHOD}...")
         return linewidth(text).Return()
-    @staticmethod
+    @staticmethod #√
     def FileSearch_FileNotFoundError1(key, lock = None):
         """
             Inputs:
@@ -412,7 +412,7 @@ class ErrMessages:
                      "within a directories name are not permitted. Rename directory to remove spaces/dashes if present "
                      "in name(s) before rerunning.")
         SlowMessageLines(text, lock)
-    @staticmethod
+    @staticmethod #√
     def FileSearch_FileNotFoundError2(key, lock = None):
         """
             Inputs:
@@ -444,7 +444,7 @@ class ErrMessages:
             + f"{key}"
             + "'{bcolors.ENDC}{bcolors.ACTION} subdirectory.")
         SlowMessageLines(text, lock)
-    @staticmethod
+    @staticmethod #√
     def FileSearch_FileNotFoundError3(keywrd, name, run, charge, filetypes, lock = None):
         """
             Inputs:
@@ -486,7 +486,7 @@ class ErrMessages:
                    + "{bcolors.ENDC}{bcolors.ACTION} method will continue for found subdirectories which contain all "
                      "required filetypes for the method.")
         SlowMessageLines(text, lock)
-    @staticmethod
+    @staticmethod #√
     def CaS_ConnectionAbortedError(path, lock=None):
         """
             Inputs:
@@ -507,29 +507,6 @@ class ErrMessages:
                      " cannot be completed at all for results. {bcolors.METHOD}Mulliken and Hirshfeld analysis"
                      "{bcolors.KEYINFO} will, however, still be performed for all results found.")
         SlowMessageLines(text, lock)
-    @staticmethod
-    def CaS_FileNotFoundError(MissingFiles, filetypes, method, lock=None):
-        """
-            Inputs:
-                DirsMissingBader(list) : List of file paths of the directory in which file was being searched for.
-
-                lock(th.Lock)          : Unowned lock synchronization primitive shared between threads which when called
-                                         upon blocks the ability of any other thread to print until the lock has
-                                         finished the printing commands within the current with statement it has
-                                         acquired and is released.
-        """
-        text = str("\n{bcolors.FAIL}WARNING: {bcolors.UNDERLINE}[Errno 2]{bcolors.ENDC}{bcolors.FAIL} Needed "
-                   "{bcolors.KEYVAR}'"
-                   + f"{filetypes}"
-                   + "'{bcolors.ENDC}{bcolors.FAIL} file(s) for {bcolors.METHOD}"
-                   + f"{method}"
-                   + "{bcolors.ENDC}{bcolors.FAIL} could not be found within the "
-                     "following directories for:")
-        SlowMessageLines(text, lock)
-        time.sleep(0.5)
-        for dir in MissingFiles:
-            text = str("{bcolors.KEYVAR}- " + f"{dir[-1]} " + "{bcolors.ENDC}")
-            SlowMessageLines(text, lock)
     @staticmethod
     def Geometry_FileExistsError():
         text = str("\n{bcolors.FAIL}ERROR: {bcolors.UNDERLINE} Too many ")
