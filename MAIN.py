@@ -24,8 +24,6 @@ from Core.Messages import ask_question, ErrMessages, Global_lock, SlowMessageLin
 from Core.NoDaemonicChildren_mp import PoolNoDaemonProcess, Rooting
 from DataCollection.FileSearch import Cataloging
 
-def programme_setup(wd):
-    Dirs.executables_address = pth.join(wd, "Executables")
 
 class Start:
     def __init__(self, cwd, _wd, proxylist, t, *args):#
