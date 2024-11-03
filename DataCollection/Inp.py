@@ -22,11 +22,11 @@ async def find_xyz(line):
 async def make_xyz(lines, index, os_path):
     indx, readlines, filename = index - 2, [], '/'.join(os_path.split('/')[:-1] + ["geometry.xyz"])
     # write new file and create counter for total number of atoms.
-    xyz_file, atoms = open(filename, 'w'), 0
+    xyz_file, atoms = open(filename, 'w'), 1
     # if line contains "&COORD", xyz atom positions finished,
     while "&COORD" not in lines[indx]:
         atoms += 1
-        readlines.insert(0, lines[indx])
+        readlines.insert(0, str("{}\n".format(lines[indx])))
         indx -= 1
     # insert standard xyz file 1st line into lines for writing to new file.
     readlines.insert(0, f"     {atoms}\n\n")
