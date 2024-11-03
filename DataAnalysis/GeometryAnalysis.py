@@ -7,10 +7,21 @@ from pymatgen.core.structure import Structure
 from Core.CentralDefinitions import Geo_Settings
 from DataCollection.FromFile import read_file_async
 
-__all__ = {'convert_back_charge', 'NewStructure', 'create_structure', 'DefineDefType'}
+__all__ = {'rdft', 'convert_back_charge', 'NewStructure', 'create_structure', 'DefineDefType', 'defect',
+           'substitutional', 'vacancy', 'vacancy_interstitial', 'interstitial'}
 
-def rdft(var, num):
-    return round(float(var), num)
+def rdft(vr, nm) -> float:
+    """
+        :param vr: item to be converted to float and rounded.
+        :param nm: number of decimal places to round item to
+        :param list:
+
+        :return float: rounded float
+    """
+    if str(vr)[str(vr).index('.')+nm+1] == str(5) and float(str(vr)[:nm+str(vr).index('.')+1]) == round(float(vr), nm):
+        return round(float(vr)+(1*(10**(-nm-1))), nm)
+    else:
+        return round(float(vr), nm)
 
 async def convert_back_charge(charge):
     if type(charge) == str:
@@ -82,9 +93,9 @@ class DefineDefType:
         bulk, defect = await read_file_async(self.perfxyz), await read_file_async(self.defxyz)
         self.bk_, self.def_ = [line.split() for line in bulk.split('\n')][2::], \
                               [line.split() for line in defect.split('\n')][2::]
-        self.bk_crds = [[rdft(x, 6), rdft(y, 6), rdft(z, 6)] for x, y, z in
+        self.bk_crds = [[rdft(x, 5), rdft(y, 5), rdft(z, 5)] for x, y, z in
                    [i for i in [l[1::] for l in self.bk_] if i != []]]
-        self.def_crds = [[rdft(x, 6), rdft(y, 6), rdft(z, 6)] for x, y, z in
+        self.def_crds = [[rdft(x, 5), rdft(y, 5), rdft(z, 5)] for x, y, z in
                     [i for i in [l[1::] for l in self.def_] if i != []]]
         if self.bk_crds == self.def_crds:
             substitutional.keys = self.name
@@ -112,7 +123,7 @@ class defect:
     def __iadd__(self, func):
         async def wrapper(*args):
             self.counter +=1
-            return await func(args)
+            return await func(*args)
         return wrapper
     def __len__(self):
         return len(self.def_)
@@ -130,8 +141,8 @@ class defect:
             idx += 1
             if self.__ne__([b, d]):
                 diff = await self.__iadd__(self.ne_satisfied)(idx, b, d, diff)
-        print(type(self).__name__, '[DA.GA L127]')
-        print('diff_atoms=', self.diff_atoms, '[DA.GA L128]')
+        # print(type(self).__name__, '[DA.GA L127]')
+        # print('diff_atoms=', self.diff_atoms, '[DA.GA L128]')
         return type(self).__name__, self.__len__(), self.counter, self.diff_atoms, self.atoms_dict
     def ne_satisfied(self, idx, b, d, diff):
         return diff
