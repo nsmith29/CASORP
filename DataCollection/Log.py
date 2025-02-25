@@ -115,6 +115,7 @@ async def find_pop2(atoms, index, lines, path):
     addbk, ckeys = Dirs().address_book, Dirs().dir_calc_keys
     for p in (p for p in [addbk["perfect"][n][r][c]['log'] for n, r, c in ([n, r, c] for n, r, c in ckeys['perfect'])] if p == path):
         SharableDicts().smd['total atoms'] = atoms
+        SharableDicts().smd.shm.close()
     collect3 = []
     rnge = atoms if len(atoms) > 1 else range(0, int(atoms[0]))
     # A of specific atom indices or from 0 to total number of atoms in system.

@@ -11,7 +11,7 @@ options = ("band structure", "charges and spins", "charge transition levels", "g
 multiplefiles4extension = [".txt", ".png", "1-1_l.cube", "2-1_l.cube", ".wfn", ".dat", ".pdos", ".log", '-L.xyz']
 
 ## DICTIONARIES
-args4pool = {"'charges and spins' in list and 'geometry' in list": "create_pipe"}
+args4pool = {"'charges and spins' in list and 'geometry' in list": "blank"}
 
 argv_dict = {"1": "{bcolors.ITALIC}the name of the {bcolors.KEYINFO}{bcolors.BOLD}directory{bcolors.ENDC}"
                   "{bcolors.ITALIC}{bcolors.INFO} of CP2K output files for the {bcolors.KEYINFO}{bcolors.BOLD}"
@@ -207,9 +207,9 @@ inp_var_fo = {"xyz1st": {"locate": ['COORD_FILE_NAME', "&END COORD", ['find_xyz'
               }
 
 optdict= {"band structure": None,
-          "charges and spins": "CntrlChrgSpns(arg)",
+          "charges and spins": "CntrlChrgSpns()",
           "charge transition levels": None,
-          "geometry": "CntrlGeometry(arg)",
+          "geometry": "CntrlGeometry()",
           "IPR": None,
           "PDOS": None,
           "WFN": None,

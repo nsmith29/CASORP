@@ -2,8 +2,8 @@
 
 import asyncio
 
-__all__ = {'async_pairing_iterator', 'GetDirs_iterator', 'FileExt_iterator', 'keylist_iterator', 'Lines_iterator',
-           'toFromFiles_iterator'}
+__all__ = {'async_pairing_iterator', 'ListElement_iterator', 'FileExt_iterator', 'Lines_iterator', 'standard_iterator',
+           'DefectTypeTestVariables_iterator', 'AdditionalAtoms_iterator'}
 
 class async_pairing_iterator():
     """
@@ -22,17 +22,17 @@ class async_pairing_iterator():
         self.counter +=1
         return await self.func(self.filepaths[self.counter], 'log', 'original'), ["path", "log"], [self.dirpaths[self.counter], self.filepaths[self.counter]] #Entry4FromFiles
 
-class getDirs_iterator():
-    def __init__(self, cat):
-        self.cat = cat
+class ListElement_iterator(): # ListElement_iterator
+    def __init__(self, element):
+        self.ele = element
         self.counter = -1
     def __aiter__(self):
         return self
     async def __anext__(self):
-        if self.counter >= len(self.cat)-1:
+        if self.counter >= len(self.ele)-1:
             raise StopAsyncIteration
         self.counter +=1
-        return self.cat[self.counter]
+        return self.ele[self.counter]
 
 class FileExt_iterator():
     def __init__(self, flexts):
@@ -48,18 +48,6 @@ class FileExt_iterator():
             raise StopAsyncIteration
         self.counter += 1
         return self.counter
-
-class keylist_iterator():
-    def __init__(self, dif_chrgs):
-        self.counter  = -1
-        self.dif_chrgs = dif_chrgs
-    def __aiter__(self):
-        return self
-    async def __anext__(self):
-        if self.counter >= len(self.dif_chrgs)-1:
-            raise StopAsyncIteration
-        self.counter +=1
-        return self.dif_chrgs[self.counter]
 
 class Lines_iterator():
     """
@@ -91,17 +79,50 @@ class standard_iterator():
         self.counter +=1
         return self.counter
 
-class toFromFiles_iterator():
-    """
-        Iterator for cycling through the multiple variables required for extraction/collection for result processing method.
-    """
-    def __init__(self, want):
-        self.want = want
-        self.counter = -1
+class DefectTypeTestVariables_iterator():
+    def __init__(self, name, bk_, def_):
+        self.bk_, self.def_ = bk_, def_
+        self._name_self2_ = name
+        self.indxcntr = -1
+    def __lt__(self):
+        return len(self.bk_) if len(self.bk_)<len(self.def_) else len(self.def_)
+    def __len__(self):
+        return self.__lt__()
     def __aiter__(self):
         return self
     async def __anext__(self):
-        if self.counter >= len(self.want) - 1:
+        if self.indxcntr >= self.__len__() - 1:
             raise StopAsyncIteration
-        self.counter += 1
-        return self.want[self.counter]
+        self.indxcntr += 1
+        if self._name_self2_ == 'substitutional' and self.bk_[self.indxcntr] != [] and self.def_[self.indxcntr] != []:
+            return [self.bk_[self.indxcntr][0], self.def_[self.indxcntr][0]]
+        elif self.bk_[self.indxcntr] != [] and self.def_[self.indxcntr] != []:
+            return [[self.indxcntr, self.bk_[self.indxcntr]], [self.indxcntr, self.def_[self.indxcntr]]]
+
+class AdditionalAtoms_iterator():
+    def __init__(self, atom, dct):
+        self.atom = atom
+        self.dct = dct
+        self.indxcntr = -1
+    def __aiter__(self):
+        return self
+    async def __anext__(self):
+        if self.indxcntr >= len(self.dct) - 1:
+            raise StopAsyncIteration
+        self.indxcntr += 1
+        if str(self.atom) in [key for key in self.dct[self.indxcntr].keys()][0]:
+            return [key for key in self.dct[self.indxcntr].keys()][0]
+        else:
+            return await self.__anext__()
+
+class GroupLstDefSites_iterator():
+    def __init__(self, dct):
+        self.indxcntr = -1
+        self.dct = dct
+    def __aiter__(self):
+        return self
+    async def __anext__(self):
+        if self.indxcntr >= len(self.dct) - 1:
+            raise StopAsyncIteration
+        self.indxcntr +=1
+        return [self.indxcntr, self.dct[self.indxcntr][0]]

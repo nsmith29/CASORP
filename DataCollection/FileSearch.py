@@ -9,7 +9,7 @@ import subprocess
 from Core.CentralDefinitions import Dirs, create_nested_dict, End_Error, TESTING, UArg, add2addressbook
 from Core.DictsAndLists import  files4res, finding_conditions, functions, inp_want, inp_var_fo, log_want, log_var_fo,\
     multiplefiles4extension, restrictions
-from Core.Iterables import async_pairing_iterator, toFromFiles_iterator, getDirs_iterator, FileExt_iterator
+from Core.Iterables import async_pairing_iterator, ListElement_iterator, FileExt_iterator
 from Core.Messages import ErrMessages, Global_lock
 from DataCollection.FromFile import iterate
 
@@ -190,7 +190,7 @@ async def Entry4FromFiles(path, file, keywrd):
         Passing on data for variable extraction/collection from files
     """
     want, var = eval("{}_want[keywrd]".format(file)), eval("{}_var_fo".format(file))
-    v2rtn = [iterate(path, var.get(item)) async for item in toFromFiles_iterator(want)]
+    v2rtn = [iterate(path, var.get(item)) async for item in ListElement_iterator(want)]
     return await asyncio.gather(*v2rtn)
 
 def CatalogueFinding(func):
@@ -200,7 +200,7 @@ def CatalogueFinding(func):
         else:
             cats = {type_: [entry for entry in Dirs().dir_calc_keys[type_] if eval(restrictions[self2.keywrd])]}
         book, errflaggd, Q = Dirs().address_book.copy(), fl_exts, asyncio.Queue()
-        async for item_ in getDirs_iterator(cats[type_]):
+        async for item_ in ListElement_iterator(cats[type_]):
             n, r, c, keylst = item_[0], item_[1], item_[2], [type_, item_[0], item_[1], item_[2]]
             Ars = [value for key, value in kwargs.items() if key == 'exchange'] if kwargs else []
             path, keys, flexts = book[type_][n][r][c]["path"], book[type_][n][r][c].keys(), []
@@ -262,7 +262,7 @@ class MethodFiles(Method):
     async def option1(self2, keylst, Q):
         await Q.put([None, self2.res[self2.out][keylst[0]]])
     async def option2(self2, keylst, extension, flpath, Q):
-        Dirs.address_book = add2addressbook(keylst, [extension], [flpath], Dirs().address_book)
+        Dirs.address_book = await add2addressbook(keylst, [extension], [flpath], Dirs().address_book)
         await asyncio.sleep(0.01)
         rtn = 'continue'
         return rtn
@@ -273,7 +273,7 @@ class MethodFiles(Method):
             while Q_.empty() is False:
                 new_fls = await Q_.get()
                 for ext, nwfl in zip(self2.res[self2.int][keylst[0]], new_fls):
-                    Dirs.address_book = add2addressbook(keylst, [ext], [nwfl], Dirs().address_book)
+                    Dirs.address_book = await add2addressbook(keylst, [ext], [nwfl], Dirs().address_book)
             Q_.task_done()
     async def option4(self2, keylst, extension):
         await asyncio.sleep(0.01)

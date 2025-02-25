@@ -85,12 +85,4 @@ class Rooting:
     """
     def __init__(self, want):
         Redistribute()
-        want, arg = arg_apply(want)
         run = asyncio.run(eval(str("{}".format(optdict.get(want)))))
-
-def arg_apply(want: str):
-    if type(want) == tuple:
-        want_, arg = list(want)[0], list(want)[1]
-    else:
-        want_, arg = want, None
-    return want_, arg

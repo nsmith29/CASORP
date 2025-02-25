@@ -6,6 +6,7 @@
 #   Author: Niamh Smith; E-mail: niamh.smith.17 [at] ucl.ac.uk
 #   Date:
 
+import asyncio
 # import os
 import sys
 import time
@@ -204,6 +205,13 @@ class linewidth:
     def Return(self):
         return self.message
 
+class Global_lock:
+    def __init__(self):
+        self._lock = th.Lock()
+    @property
+    def lock(self):
+        return self._lock
+
 class SlowMessageLines(linewidth):
     """
         Delayed printing of whole lines of text to command line terminal. Slowing down pace at which information given.
@@ -217,26 +225,58 @@ class SlowMessageLines(linewidth):
                             commands within the current with statement it has acquired and
                             is released.
     """
-    def __init__(self, message, lock = None):
-        super().__init__(message)
-        lines = self.message.splitlines()
-        # text to be printed is within a multithreading environment.
-        if lock:
-            with lock:
-                self.Print(lines)
+    def __init__(self, message, lock = Global_lock().lock, a_sync=None, Qask=None):
+        self.Qask = Qask
+        if Qask:
+            self.parts = message.replace('{ask_','*ask_').replace('])}','])*').split('*')
+            self.lines = []
+            if not a_sync:
+                self.results = self.toask(self.parts)
         else:
-            self.Print(lines)
-    def Print(self,lines):
+            super().__init__(message)
+            self.lines = self.message.splitlines()
+        self.lock = lock
+        if not a_sync:
+            with lock:
+                self.Print(self.lines)
+    def toask(self, parts):
+        results = []
+        for part in parts:
+            if 'ask' not in part:
+                super().__init__(part)
+                lines = self.message.splitlines()
+                self.Print(lines)
+            else:
+                results.append(eval(part))
+        return results
+    async def asynctoask(self, ifcond=None):
+        results = []
+        for part in self.parts:
+            if ifcond is not None and "--ifcond--" in part:
+                part = part.replace("--ifcond--", '')
+                if eval("{}".format(ifcond)) is True:
+                    super().__init__(part)
+                    lines = self.message.splitlines()
+                    self.Print(lines)
+                else:
+                    break
+            if 'ask' not in part:
+                super().__init__(part)
+                self.lines = self.message.splitlines()
+                await self.asyncprint()
+            else:
+                results.append(eval(part))
+                await asyncio.sleep(0.01)
+        return results
+    async def asyncprint(self):
+        with self.lock:
+            for line in self.lines:
+                await asyncio.sleep(0.75)
+                print(f"{line}")  # [C.M L244]")
+    def Print(self, lines):
         for line in lines:
             time.sleep(0.75)
-            print(f"{line}")#[C.M L249]")
-
-class Global_lock:
-    def __init__(self):
-        self._lock = th.Lock()
-    @property
-    def lock(self):
-        return self._lock
+            print(f"{line}")#[C.M L239]")
 
 class ErrMessages:
     """

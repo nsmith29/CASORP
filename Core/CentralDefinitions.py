@@ -8,7 +8,7 @@ import sys
 from shared_memory_dict import SharedMemoryDict
 import Core
 from Core.DictsAndLists import boolconvtr, args4pool
-from Core.Iterables import getDirs_iterator
+from Core.Iterables import ListElement_iterator
 
 __all__ = {'add2addressbook', 'CaS_Settings', 'create_nested_dict', 'CreateSharableDicts', 'Ctl_Settings', 'Dirs',
            'End', 'End_Error', 'Geo_Settings', 'GetDirs', 'proxyfunction', 'proxy4keys', 'ProcessCntrls', 'Redistribute',
@@ -62,10 +62,12 @@ def savekeys(func):
         return d1, d2
     return wrapper
 
-def add2addressbook(keys, subkeys, path, d):
-    for sub, val in zip(subkeys, path):
-        # if sub not in d[keys[0]][keys[1]][keys[2]][keys[3]].keys():
-        d[keys[0]][keys[1]][keys[2]][keys[3]][sub] = val
+async def add2addressbook(keys, subkeys, subval, d):
+    outer = d
+    async for key in ListElement_iterator(keys):
+        outer = outer[key]
+    for sub, val in zip(subkeys, subval):
+        outer[sub] = val
     return d
 
 @savekeys
@@ -73,7 +75,6 @@ def create_nested_dict(keys, subkeys, paths, d):
     """
         Creating/Adding nested dict data to [pre-existing] dictionary entries, instead of creating new entry of same key.
     """
-
     assert isinstance(keys, list), "keys must be a list of major outer nested dict keys strs"
     assert isinstance(subkeys, list), "subkeys must be a list of minor inner nested keys strs"
     assert isinstance(paths, list), "path must be a list [usually of os.path() file path strs]"
@@ -140,10 +141,14 @@ def GetDirs(func):
 
 def percalcdir(func):
     async def wrapper(type_, **kwargs):
-        async for item_ in getDirs_iterator(Dirs().dir_calc_keys[type_]):
+        async for item_ in ListElement_iterator(Dirs().dir_calc_keys[type_]):
+            await asyncio.sleep(0.01)
             n, r, c = item_[0], item_[1], item_[2]
             if 'retrn' in kwargs.keys():
                 return await func(type_, n, r, c)
+            elif 'condition' in kwargs.keys():
+                if eval("{}".format(kwargs['condition'])) is True:
+                    await func(type_, n, r, c, **kwargs)
             else:
                 await func(type_, n, r, c, **kwargs)
     return wrapper
@@ -174,6 +179,13 @@ class CreateSharableDicts:
         SharableDicts().smd[name] = dict
         SharableDicts().smd.shm.close()
 
+class DictProperty(dict):
+    def __init__(self, klass, method):
+        dict4kwargs = eval("{}().{}".format(klass, method))
+        if type(dict4kwargs) is not dict:
+            dict4kwargs = dict(dict4kwargs)
+        super().__init__(dict4kwargs)
+
 class Pool_Args_check:
     def __init__(self, list):
         self.list = []
@@ -181,8 +193,15 @@ class Pool_Args_check:
         for cond, func in args4pool.items():
             if eval("{}".format(cond)) is True:
                 self.list = eval("self.{}(list)".format(func))
+
         if self.list == []:
             self.list = list
+    def blank(self, list):
+        return list
+    # def storage_management(self, list):
+    #     last = list[-1]
+    #     list[-1] = (last, True)
+    #     return list
     def Return(self):
         return self.list
 
@@ -193,9 +212,13 @@ class Redistribute:
                 exec(f'{key} = SharableDicts().smd[key]')
             self.populate_processresults('perfect')
             self.populate_processresults('defect')
-        else:
+            # SharableDicts().smd.shm.close()
+        elif Key:# and clear:
             exec(f'{Key} = SharableDicts().smd[Key]')
         SharableDicts().smd.shm.close()
+        # elif Key and not clear:
+        #     exec(f'{Key} = SharableDicts().smd[Key]')
+        #     SharableDicts().smd.shm.close()
     @GetDirs
     def populate_processresults(self, type, n, r, c):
         ProcessCntrls.processresults, _ = create_nested_dict([type, n, r, c], ProcessCntrls().processwants,
@@ -217,11 +240,6 @@ class NewProperty(object):
     def __get__(self, obj, type=None) -> object:
         obj.__dict__[self.name] = self.function(obj)
         return obj.__dict__[self.name]
-
-class DictProperty(dict):
-    def __init__(self, klass, method):
-        dict4kwargs = eval("{}().{}".format(klass, method))
-        super().__init__(dict4kwargs)
 
 class Ctl_Settings:
     @NewProperty
@@ -337,22 +355,35 @@ class Geo_Settings:
                         }, {name2 : ,,,}, ...
             }, {defect: ...}
     """
+    def __init__(self):
+        self._struc_data = SharedMemoryDict("struc_data", size=1024)
+        self._question_def_sites = SharedMemoryDict("question_def_sites", size=1024)
     @NewProperty
     def perf_lxyz(self, string=None):
         return string
     @NewProperty
     def struc_data(self, dict_=None):
         if dict_ is None:
-            dct = {"perfect": dict(), "defect": dict()}
-        return dct
+            dict_ = {"perfect": dict(), "defect": dict()}
+        for key, value in dict_.items():
+            self._struc_data[key] = value
+        return self._struc_data
     @NewProperty
     def checkdefatnum(self, bool=None):
         return bool
     @NewProperty
-    def question_def_sites(self, dict_: dict = None) -> dict:
+    def question_def_sites(self, dict_: dict = None) -> SharedMemoryDict:
         if dict_ is None:
-            dct_ = {}
-        return dct_
+            dict_= {'blank': dict()}
+        # if dict_ is not None:
+        for key, value in dict_.items():
+            self._question_def_sites[key] = value
+        return self._question_def_sites
+    def closedown(self):
+        for smd in [self._struc_data, self._question_def_sites]:
+            smd.shm.close()
+            smd.shm.unlink()
+            del smd
 
 class ProcessCntrls:
     """

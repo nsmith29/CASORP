@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
+from asgiref.sync import sync_to_async
 from collections import defaultdict
 from pymatgen.core.structure import Structure
 # import warnings
 from Core.CentralDefinitions import Geo_Settings
+from Core.Iterables import DefectTypeTestVariables_iterator, AdditionalAtoms_iterator, standard_iterator
 from DataCollection.FromFile import read_file_async
 
 __all__ = {'rdft', 'convert_back_charge', 'NewStructure', 'create_structure', 'DefineDefType', 'defect',
@@ -18,7 +20,8 @@ def rdft(vr, nm) -> float:
 
         :return float: rounded float
     """
-    if str(vr)[str(vr).index('.')+nm+1] == str(5) and float(str(vr)[:nm+str(vr).index('.')+1]) == round(float(vr), nm):
+    if len(str(vr)) > str(vr).index('.')+nm+1 and str(vr)[str(vr).index('.')+nm+1] == str(5) and \
+            float(str(vr)[:nm+str(vr).index('.')+1]) == round(float(vr), nm):
         return round(float(vr)+(1*(10**(-nm-1))), nm)
     else:
         return round(float(vr), nm)
@@ -57,8 +60,7 @@ class NewStructure(Structure):
         for cindex, pindex, d in zip(center_indices, points_indices, distances, ):
             if pindex not in neighbor_dict or pindex in neighbor_dict and cindex not in neighbor_dict[pindex]:
                 neighbor_dict[int(cindex)].append(int(pindex))
-                bonds.append(str("{}-{}".format(cindex, pindex)))
-
+                bonds.append({str("{}-{}".format(cindex, pindex)): rdft(d,4)})
         n_dict = neighbor_dict
         neighbors = []
         for i in range(len(sites)):
@@ -71,8 +73,6 @@ async def create_structure(atoms, x, y, z, A, B, C, charge):
     matrix = []
     for x_, y_, z_ in zip(list(x), list(y), list(z)):
         matrix.append([x_, y_, z_])
-    # warnings.filterwarnings('ignore', '.*CrystalNN.*', )
-    # warnings.filterwarnings('ignore', '.*No oxidation.*', )
     structure = NewStructure([A, B, C], atoms, matrix, charge, to_unit_cell=True, coords_are_cartesian=True)
     await asyncio.sleep(0.01)
     return structure
@@ -80,9 +80,12 @@ async def create_structure(atoms, x, y, z, A, B, C, charge):
 class DefineDefType:
     def __init__(self, calckey, perfxyz, defxyz):
         self.name = calckey
-        self.perfxyz, self.defxyz = perfxyz, defxyz
-        self.bk_, self.def_ = None, None
+        # self.perfxyz, self.defxyz = perfxyz, defxyz
+        # self.bk_, self.def_ = None, None
+        self.bk_, self.def_ = perfxyz, defxyz
         self.bk_crds, self.def_crds = None, None
+        # self.bk_, self.def_ = perfatoms, defatoms
+        # self.bk_crds, self.def_crds = perfxyz, defxyz
     def __getitem__(self, j):
         return [1 if self.bk_crds[j] not in self.def_crds else [2 if self.def_crds[j] not in self.bk_crds else None][0]][0]
     def __ne__(self, i):
@@ -90,36 +93,35 @@ class DefineDefType:
     def __lt__(self):
         return len(self.bk_crds) if len(self.bk_crds)<len(self.def_crds) else len(self.def_crds)
     async def type_definition(self):
-        bulk, defect = await read_file_async(self.perfxyz), await read_file_async(self.defxyz)
-        self.bk_, self.def_ = [line.split() for line in bulk.split('\n')][2::], \
-                              [line.split() for line in defect.split('\n')][2::]
-        self.bk_crds = [[rdft(x, 5), rdft(y, 5), rdft(z, 5)] for x, y, z in
-                   [i for i in [l[1::] for l in self.bk_] if i != []]]
-        self.def_crds = [[rdft(x, 5), rdft(y, 5), rdft(z, 5)] for x, y, z in
-                    [i for i in [l[1::] for l in self.def_] if i != []]]
+        self.bk_crds = [[rdft(self.bk_[i][1], 6), rdft(self.bk_[i][2], 6), rdft(self.bk_[i][3], 6)] async for i in
+                   standard_iterator(len(self.bk_))]
+        self.def_crds = [[rdft(self.def_[i][1], 6),  rdft(self.def_[i][2], 6), rdft(self.def_[i][3], 6)] async for i in
+                    standard_iterator(len(self.def_))]
         if self.bk_crds == self.def_crds:
             substitutional.keys = self.name
-            return await substitutional([[self.bk_[i][0], *self.bk_crds[i]] for i in range(len(self.bk_crds))],
-                                  [[self.def_[i][0], *self.def_crds[i]] for i in range(len(self.def_crds))]).finding()
+            return await substitutional([[self.bk_[i][0], *self.bk_crds[i]] async for i in standard_iterator(len(self.bk_crds))],
+                                  [[self.def_[i][0], *self.def_crds[i]] async for i in standard_iterator(len(self.def_crds))]).finding()
         else:
-            select = [k for k in [self.__getitem__(j) for j in [i for i in range(self.__lt__()) if self.__ne__(i)]] if k !=None]
+            select = [k for k in [self.__getitem__(j) for j in [i async for i in standard_iterator(self.__lt__()) if self.__ne__(i)]] if k !=None]
             if 1 in select and 2 in select:
                 vacancy_interstitial.keys = self.name
-                return await vacancy_interstitial([[self.bk_[i][0], *self.bk_crds[i]] for i in range(len(self.bk_crds))],
-                                  [[self.def_[i][0], *self.def_crds[i]] for i in range(len(self.def_crds))]).finding()
+                return await vacancy_interstitial([[self.bk_[i][0], *self.bk_crds[i]] async for i in standard_iterator(len(self.bk_crds))],
+                                  [[self.def_[i][0], *self.def_crds[i]] async for i in standard_iterator(len(self.def_crds))]).finding()
             elif 2 not in select:
                 vacancy.keys = self.name
-                return await vacancy([[self.bk_[i][0], *self.bk_crds[i]] for i in range(len(self.bk_crds))],
-                                  [[self.def_[i][0], *self.def_crds[i]] for i in range(len(self.def_crds))]).finding()
+                return await vacancy([[self.bk_[i][0], *self.bk_crds[i]] async for i in standard_iterator(len(self.bk_crds))],
+                                  [[self.def_[i][0], *self.def_crds[i]] async for i in standard_iterator(len(self.def_crds))]).finding()
             elif 1 not in select:
                 interstitial.keys = self.name
-                return await interstitial([[self.bk_[i][0], *self.bk_crds[i]] for i in range(len(self.bk_crds))],
-                                  [[self.def_[i][0], *self.def_crds[i]] for i in range(len(self.def_crds))]).finding()
+                return await interstitial([[self.bk_[i][0], *self.bk_crds[i]] async for i in standard_iterator(len(self.bk_crds))],
+                                  [[self.def_[i][0], *self.def_crds[i]] async for i in standard_iterator(len(self.def_crds))]).finding()
 
 class defect:
     keys = None
     def __init__(self, bk_, def_):
+        # print('within defect type class')
         self.bk_, self.def_, self.diff_atoms, self.atoms_dict, self.indicator, self.counter = bk_, def_, [], [], None, 0
+        self.additional_noted = []
     def __iadd__(self, func):
         async def wrapper(*args):
             self.counter +=1
@@ -129,39 +131,32 @@ class defect:
         return len(self.def_)
     async def diff(self, *args):
         return args
-    def test_variable(self, type_):
-        raise NotImplementedError('function deriving variables to use in for loop not implemented')
+    # def test_variable(self, type_):
+    #     raise NotImplementedError('function deriving variables to use in for loop not implemented')
     async def finding(self):
+        # print('within finding of defect type class')
         diff = None  # will become number of defect sites found.
         idx = -1
-        for b, d in zip(self.test_variable(self.bk_), self.test_variable(self.def_)):
+        async for b, d in DefectTypeTestVariables_iterator(type(self).__name__, self.bk_, self.def_):
             await asyncio.sleep(0.001)
             if diff:
                 b, d = await self.diff(b, d, diff)
             idx += 1
             if self.__ne__([b, d]):
                 diff = await self.__iadd__(self.ne_satisfied)(idx, b, d, diff)
-        # print(type(self).__name__, '[DA.GA L127]')
-        # print('diff_atoms=', self.diff_atoms, '[DA.GA L128]')
         return type(self).__name__, self.__len__(), self.counter, self.diff_atoms, self.atoms_dict
-    def ne_satisfied(self, idx, b, d, diff):
+    async def ne_satisfied(self, idx, b, d, diff):
         return diff
-    def additional(self, dif_atoms):
+    async def additional(self, dif_atom):
         additional = []
-        keys = self.keys
-        for atom in dif_atoms:
-
-            for bond in Geo_Settings().struc_data[keys[1]][keys[2]][keys[3]][keys[4]][keys[0]]['bonds']:
-                atoms = bond.replace('-', ' ').split()
-                if atom == atoms[0] or atom == atoms[1]:
-                    length1 = len(additional)
-                    additional.append([atoms[i] for i in range(len(atoms)) if
-                                       atoms[i] != atom and atoms[i] not in additional and atom[i] not in dif_atoms])
-                    if length1 != len(additional) and len(additional[-1]) == 1:
-                        print('in if testing additional length', [additional[-1][0]][0], '[DA.GA L143]')
-                        additional.insert(-1, [additional[-1][0]][0])
-                    print('just before additional.pop(-1)', additional[-1], '[DA.GA L145]')
-                    additional.pop(-1)
+        k = self.keys
+        async for bd in AdditionalAtoms_iterator(dif_atom, Geo_Settings().struc_data[k[1]][k[2]][k[3]][k[4]][k[0]]['bonds']):
+            atoms = bd.replace('-', ' ').split()
+            adding = [int(atoms[i]) for i in range(len(atoms)) if
+                               atoms[i] != str(dif_atom) and atoms[i] not in self.additional_noted]
+            if adding != []:
+                additional.extend(adding)
+                self.additional_noted.extend(adding)
         return additional
 
 class substitutional(defect):
@@ -169,8 +164,8 @@ class substitutional(defect):
         super().__init__(bk_, def_)
     def __ne__(self, other):
         return other[0] != other[1]
-    def test_variable(self, type_):
-        return [var[0] for var in [l for l in type_ if l != []]]
+    # def test_variable(self, type_):
+    #     return [var[0] for var in [l for l in type_ if l != []]]
     async def ne_satisfied(self, idx, b, d, diff):
         self.diff_atoms.append(str(idx))
         self.atoms_dict.append({str(idx): d})
@@ -189,8 +184,8 @@ class vacancy(defect):
             self.indicator = 'substitution'
         return v1[0] != v2[0] and v1[1] != v2[1] and v1[2] != v2[2] and v1[3] != v2[3] or v1[0] != v2[0] and v1[1] == \
                v2[1] and v1[2] == v2[2] and v1[3] == v2[3]
-    def test_variable(self, type_):
-        return [[l1, [a1, x1, y1, z1]] for [l1, [a1, x1, y1, z1]] in enumerate([l for l in type_ if l != []])]
+    # def test_variable(self, type_):
+    #     return [[l1, [a1, x1, y1, z1]] for [l1, [a1, x1, y1, z1]] in enumerate([l for l in type_ if l != []])]
     async def diff(self, b, d, diff):
         l2, a2, x2, y2, z2 = d[0], *d[1]
         l2 = l2 - diff
@@ -199,7 +194,7 @@ class vacancy(defect):
     async def ne_satisfied(self, idx, b, d, diff):
         if self.indicator is None:
             self.atoms_dict.append({str(idx) + ' missing from defect': b[1][0]})
-            toadd = self.additional([idx])
+            toadd = await self.additional(idx)
             self.diff_atoms.extend([ i for i in toadd])
             self.atoms_dict.extend({str(i) : self.def_[i][0]} for i in toadd)
             diff_ = diff + 1 if diff else 1
@@ -227,8 +222,8 @@ class vacancy_interstitial(defect):
             self.indicator.append('substitution')
         return b[0] != d[0] and b[1] != d[1] and b[2] != d[2] and b[3] != d[3] or b[0] != d[0] and b[1] == d[1] and b[
             2] == d[2] and b[3] == d[3]
-    def test_variable(self, type_):
-        return [[l1, [a1, x1, y1, z1]] for [l1, [a1, x1, y1, z1]] in enumerate([l for l in type_ if l != []])]
+    # def test_variable(self, type_):
+    #     return [[l1, [a1, x1, y1, z1]] for [l1, [a1, x1, y1, z1]] in enumerate([l for l in type_ if l != []])]
     async def diff(self, b, d, diff):
         if self.indicator[0] == 'vacancy':
             b_, d_ = vacancy(self.bk_, self.def_).diff(b, d, diff)
@@ -236,10 +231,11 @@ class vacancy_interstitial(defect):
             b_, d_ = interstitial(self.bk_, self.def_).diff(b, d, diff)
         return b_, d_
     async def ne_satisfied(self, idx, b, d, diff):
-        self.diff_atoms.append(str(idx)) if self.indicator[-1] != 'vacancy' else self.diff_atoms.extend(
-            [i for i in self.additional([idx])])
-        self.atoms_dict.append({str(idx): d[1][0]}) if self.indicator[-1] != 'vacancy' else self.atoms_dict.extend(
-            [{str(idx + ' missing from defect'): b[1][0]}, *[{str(i) : self.def_[i][0]} for i in self.additional([idx])]])
+        toadd = str(idx) if self.indicator[-1] != 'vacancy' else [i for i in await self.additional(idx)]
+        self.diff_atoms.append(toadd) if self.indicator[-1] != 'vacancy' else self.diff_atoms.extend(
+            toadd)
+        self.atoms_dict.append({toadd: d[1][0]}) if self.indicator[-1] != 'vacancy' else self.atoms_dict.extend(
+            [{str(idx + ' missing from defect'): b[1][0]}, *[{str(i) : self.def_[i][0]} for i in toadd]])
         if self.indicator[-1] == 'substitution':
             diff_ = diff
         else:
@@ -265,8 +261,8 @@ class interstitial(defect):
             self.indicator = 'substitution'
         return v1[0] != v2[0] and v1[1] != v2[1] and v1[2] != v2[2] and v1[3] != v2[3] or v1[0] != v2[0] and v1[1] == \
                v2[1] and v1[2] == v2[2] and v1[3] == v2[3]
-    def test_variable(self, type_):
-        return [[l1, [a1, x1, y1, z1]] for [l1, [a1, x1, y1, z1]] in enumerate([l for l in type_ if l != []])]
+    # def test_variable(self, type_):
+    #     return [[l1, [a1, x1, y1, z1]] for [l1, [a1, x1, y1, z1]] in enumerate([l for l in type_ if l != []])]
     async def diff(self, b, d, diff):
         l1, a1, x1, y1, z1 = b[0], *b[1]
         l1 = l1 - diff
